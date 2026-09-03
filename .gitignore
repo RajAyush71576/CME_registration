@@ -1,0 +1,20 @@
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Backend
+backend/venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.pyc
+
+# Central Excel data store & generated files (not committed)
+data/*.xlsx
+data/signatures/
+data/certificates/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

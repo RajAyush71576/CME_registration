@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+openpyxl
+pandas
+python-multipart
+filelock
+reportlab
+pyjwt
+bcrypt
