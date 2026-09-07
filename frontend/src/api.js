@@ -42,11 +42,16 @@ async function request(path, options = {}) {
 export const api = {
   login: (email, password) =>
     request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+  logout: () => request('/auth/logout', { method: 'POST' }),
   me: () => request('/auth/me'),
 
   listEvents: () => request('/events'),
+  getEvent: (eventId) => request(`/events/${eventId}`),
   createEvent: (data) =>
     request('/events', { method: 'POST', body: JSON.stringify(data) }),
+  closeEvent: (eventId) => request(`/events/${eventId}/close`, { method: 'POST' }),
+
+  listEventRegistrations: (eventId) => request(`/registrations/by-event/${eventId}`),
 
   listParticipants: () => request('/participants'),
   createParticipant: (data) =>

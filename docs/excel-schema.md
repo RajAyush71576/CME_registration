@@ -1,9 +1,11 @@
-# Central Excel Workbook Schema (Design)
+# Central Excel Workbook Schema (Historical)
 
-Design doc for the single shared `.xlsx` workbook that acts as the system's data store
-(see `CONTEXT.md` sections 1, 2, 12). Not yet implemented — no read/write code or actual
-workbook exists yet. This defines target sheet names and columns for the Excel data-access
-layer to build against.
+**Superseded (2026-09-07)**: Postgres is now the live data store — see `CONTEXT.md` Status →
+"PostgreSQL + Redis migration" and `backend/app/models.py`. Excel is import/export-only
+(uploading a registrant sheet, downloading a report/observer-sheet). This document is kept
+because the Postgres schema is a near-1:1 mirror of what's described below (same field names,
+same shapes) — read it as "what each table represents," not as a description of a live
+workbook anymore.
 
 ## Sheet: `Participants`
 
@@ -95,7 +97,7 @@ layer to build against.
 |---|---|
 | user_id | Primary key, generated |
 | name | Staff name |
-| role | e.g. `registration_desk` \| `observer` \| `admin` |
+| role | `admin` \| `staff` — enforced server-side via `require_admin` (see CONTEXT.md Status) |
 | email | Login identifier |
 | password_hash | bcrypt hash; never store/return plaintext |
 
@@ -110,20 +112,20 @@ layer to build against.
 | timestamp | Auto-captured |
 | details | Free text |
 
-## Concurrency (resolved)
+## Concurrency (resolved, now via Postgres)
 
-Writes from 3-6 tablets are serialized via `excel_store.transaction()` — a `FileLock` +
-in-process `threading.Lock` held across an entire read-check-write sequence (not just a
-single call), so check-then-act operations (duplicate registration/sign-in, sequential
-certificate numbering) can't race. Verified under concurrent load with 10 simultaneous
-duplicate-registration/sign-in attempts and 8 simultaneous certificate issuances — see
-`app/routers/registrations.py`, `attendance.py`, `certificates.py`, `imports.py` for usage.
-Multi-process/multi-worker deployment is still covered by the `FileLock` (file-based, not
-just in-process), but hasn't been load-tested across real separate processes yet.
+Originally serialized via `excel_store.transaction()` (a `FileLock` + in-process
+`threading.Lock`); as of the Postgres migration this is real database transactions and
+constraints instead — `UNIQUE(participant_id, event_id)` / `UNIQUE(registration_id)` reject
+duplicates at the database level, and certificate numbering uses an atomic `UPDATE ...
+RETURNING` on a per-event counter row. Re-verified under the same concurrent-load test
+(10 simultaneous duplicate-registration/sign-in attempts, 8 simultaneous certificate
+issuances) against real Postgres — see `app/routers/registrations.py`, `attendance.py`,
+`certificates.py`, `imports.py`. This approach is correct across multiple backend processes
+natively (no file lock needed at all).
 
 ## Open questions
 
-- Where the workbook and per-event backups live on disk / storage in production.
-- ID generation strategy (UUID vs. sequential per sheet) given Excel has no autoincrement —
-  currently UUID hex for all primary keys except certificate_no, which is a per-event
-  sequential counter.
+- Backup/retention strategy for the Postgres data in production (not yet defined).
+- ID generation strategy — currently UUID hex for all primary keys except certificate_no,
+  which is a per-event sequential counter (`event_certificate_counters` table).

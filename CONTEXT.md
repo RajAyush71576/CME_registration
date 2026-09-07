@@ -233,7 +233,7 @@ CME Website Excel / On-Spot Registration
 
 ## Status
 
-_Last updated: 2026-09-03._ Requirements were never formally approved in writing (per the source
+_Last updated: 2026-09-07._ Requirements were never formally approved in writing (per the source
 doc's own "Next step"), but implementation proceeded iteratively anyway. The core flow described
 in §18 (Final End-to-End Flow) is implemented end-to-end and manually verified except email/WhatsApp
 delivery.
@@ -261,10 +261,22 @@ Tailwind + React Router), `docs/excel-schema.md` (workbook schema + concurrency 
 - CME Observer Sign-Off Sheet (§9): colored PDF listing only registrants who completed
   sign-out, for one batch sign-off.
 - Attendance & Reporting Export (§14): consolidated `.xlsx` export, optionally event-scoped.
-- Auth (§16, partial): real JWT auth, bcrypt password hashes, all endpoints except
-  `/health` and `/auth/login` require a valid token. 3 seed accounts only (no staff
-  account-management UI yet); role is stored and shown but **not** used for access control
-  (every authenticated user can do everything).
+- Auth (§16): real JWT auth, bcrypt password hashes, all endpoints except `/health` and
+  `/auth/login` require a valid token. 2 seed accounts (`admin@cme.local`/`admin123`,
+  `staff@cme.local`/`staff123`) — no staff account-management UI yet.
+- **Two-role RBAC (2026-09-07)**: collapsed the old 3-role model (`admin`/`registration_desk`/
+  `observer`) to exactly `admin`/`staff` per a client spec requesting a two-role architecture.
+  `require_admin` dependency added in `app/auth.py`; gated admin-only at the router level:
+  event creation, `imports.py`, `certificates.py`, `reports.py`, `observer_sheet.py`. Left open
+  to both roles: participant/registration CRUD, search, attendance sign-in/sign-out, `GET
+  /events`. Frontend split into `/admin/*` and `/staff/*` routes (`RequireRole.jsx`), role-aware
+  nav (`Layout.jsx`), post-login redirect by role. **Conflict found & resolved**: certificate
+  issuance was previously reachable from the staff Check-In screen
+  (`AttendanceCard.jsx`) — since the spec makes certificates admin-only, that UI is now hidden
+  for non-admin users (would otherwise 403). Verified live: unauthenticated → 401 everywhere;
+  staff → 403 on event-create/import/certificates/reports/observer-sheet, 200/201 on
+  participants/registrations/attendance; admin → 200/201 everywhere. Old `desk@cme.local`/
+  `observer@cme.local` accounts no longer exist.
 - Multi-tablet concurrency: load-tested with simulated concurrent tablets (duplicate
   registration, duplicate sign-in, concurrent certificate issuance) — see
   `docs/excel-schema.md` → Concurrency (resolved).
@@ -278,8 +290,6 @@ Tailwind + React Router), `docs/excel-schema.md` (workbook schema + concurrency 
 - Production deployment (§13, §16 latter half) — no Dockerfiles, no Nginx config, no HTTPS,
   and `JWT_SECRET` still falls back to a hardcoded dev value if the env var isn't set. Not
   safe to deploy as-is.
-- Role-based access control — roles exist (`admin`, `registration_desk`, `observer`) but
-  don't restrict anything yet; §16 calls for actual RBAC.
 - Staff account management UI — accounts only exist via the hardcoded seed script
   (`backend/app/seed.py`).
 - Country-required-for-international-attendees isn't enforced (§1) — `country` is just an
@@ -293,8 +303,120 @@ Tailwind + React Router), `docs/excel-schema.md` (workbook schema + concurrency 
 - The frontend has not been visually verified in a real browser in this environment
   (Claude-in-Chrome extension wasn't connected) — only build/route/API-level checks were
   done. Worth an actual click-through before treating any page as done.
+- **RBAC upgrade Phases 2-4** (Phase 1 — role gating — is done, see above):
+  - Phase 2: no `PUT /participants/{id}` edit endpoint exists at all yet — staff can create
+    and search participants but not correct a detail on the spot. Decided approach:
+    lightweight `updated_by`/`updated_at` stamps (not a full field-diff audit log).
+  - Phase 3: Events sheet is still missing `event_code`, `status` (active/inactive),
+    `created_by`, `created_at`/`updated_at`. Decided: staff-facing event list should filter
+    to `status == active`; sign-off gating stays duration-since-sign-in (not switched to a
+    configurable wall-clock window).
+  - Phase 4: no admin dashboard/stats endpoint or page yet.
 
-**Suggested next step**: pick one of Email/WhatsApp (needs your provider decision first),
-production deployment hardening, or RBAC — none of the three block each other. Production
-deployment is the least likely to need further decisions from you and is worth doing before
-this goes anywhere near real staff/tablets.
+**PostgreSQL + Redis migration (2026-09-07)**: per a client spec requiring a real persistent
+database (Excel is input/output-only from here — imports/reports — never the live store) plus
+Redis for narrowly-scoped infra needs. Full plan, decisions, and the honest "where Redis
+doesn't help" reasoning are in the architecture-review conversation; only the outcomes are
+tracked here.
+
+**All four phases done and verified** — `excel_store.py` is deleted; Postgres is the live
+source of truth; Excel is import/export-only, exactly as required.
+
+- **Phase A**: `backend/app/models.py` — SQLAlchemy models for all 9 former sheets, a
+  faithful mirror (same column names as the Pydantic schemas, same UUID-hex ID scheme via
+  `uuid.uuid4().hex` — not Postgres's native UUID type, so the API contract barely moved)
+  **plus real constraints the Excel version couldn't have**: `UNIQUE(participant_id,
+  event_id)` on registrations, `UNIQUE(registration_id)` on attendance, FKs everywhere, and
+  a new `event_certificate_counters` table for atomic per-event sequential certificate
+  numbering (`UPDATE ... RETURNING` — a plain UPDATE takes a row lock, so concurrent
+  issuances for the same event serialize on it, no app-level lock needed). `backend/app/
+  database.py` (engine/session), `backend/alembic/` (migrations), `docker-compose.yml` at
+  the repo root (Postgres 16 + Redis 7, local dev only — app containerization is still the
+  separate "production deployment" item below), `backend/.env.example`.
+- **Phase B**: every router cut over from `excel_store` to the ORM (`db_utils.row_to_dict`
+  keeps the dict-style access patterns in each router's business logic unchanged, so the
+  diff is almost entirely in the persistence calls, not the logic). Timestamp fields in
+  `schemas.py` changed from `str` to `datetime`/`date` (Postgres returns real datetime
+  objects, not ISO strings — this was the one real bug hit during cutover, caught by a
+  `ResponseValidationError` on the first participant-create call and fixed immediately).
+  `imports.py`'s whole-batch import takes a row lock on the target Event
+  (`.with_for_update()`) for the duration of the transaction, replacing the old
+  whole-workbook file lock with something correctly scoped to just that event.
+- **Phase C**: Redis wired into exactly two things, per the "don't blindly add Redis"
+  scoping decided earlier — rate-limiting `POST /auth/login` (10 attempts / 5 min per IP,
+  429 past that) and JWT revocation on logout (`POST /auth/logout`, new endpoint; tokens
+  carry a `jti` now; a revoked token's `jti` is stored in Redis with TTL = its remaining
+  lifetime, checked in `get_current_user`). Frontend's `logout()` now calls the endpoint
+  instead of only clearing local state. No caching, no distributed locks, no job queue —
+  deliberately, per the earlier reasoning (Postgres handles concurrency correctly on its
+  own at this scale; a cache would fight the real-time admin/staff consistency requirement).
+- **Phase D**: `README.md` rewritten with the `docker compose up -d postgres redis` →
+  `alembic upgrade head` → `uvicorn` sequence.
+
+**Verified end-to-end** against the real containers (not mocked): full workflow (event →
+participant → registration with license/CME-credit validation → sign-in → duration-gated
+sign-out → certificate issuance with correct sequential numbering → PDF download), Excel
+import with row-level validation errors, attendance report export, observer sheet PDF, every
+RBAC boundary from the earlier phase (401/403 in all the same places), and — the actual point
+of the migration — the concurrency test script re-run against Postgres: 10 concurrent
+duplicate registrations → 1 success/9 conflicts, 10 concurrent duplicate sign-ins → 1/9, 8
+concurrent certificate issuances → clean `001`-`008` with zero duplicates, all via real DB
+transactions/constraints instead of the old custom file-lock.
+
+**Known follow-ups, not blocking**: `event_certificate_counters` rows are only created
+alongside new events going forward (fine — greenfield, no old events to backfill).
+Certificate/signature files still live on local disk with the path stored in Postgres, not
+S3/Cloudinary — unchanged from before, still a separate future item. Rate-limit/revocation
+Redis keys aren't namespaced beyond a plain prefix — fine for one app on one Redis instance,
+would want a proper key prefix if this Redis is ever shared.
+
+**Frontend redesign + event lifecycle (2026-09-07, later same day)**: iterative UI work on top
+of the migration, driven directly by the client:
+
+- Admin Events: list sorted by date, click-through to an event detail page (event info +
+  full participant table), "+ Create Event" moved into a popup modal
+  (`CreateEventModal.jsx`). New backend endpoint `GET /registrations/by-event/{event_id}`
+  (shared with `/search`'s join logic via `_registration_details_for_event`).
+  Participants page similarly redesigned: search box + "+ Create Participant" modal.
+- Staff got its own `/staff/events` + `/staff/events/:eventId` routes (same components,
+  role-aware: no create-event button, back-links point at `/staff/events`). Standalone
+  "Participants" nav item removed for staff — participant info is reached by drilling into
+  an event instead; the `/participants` route/page still exists, just unlinked from staff
+  nav.
+- Event detail page: staff (not admin) can add "+ New Participant" *for that event* directly
+  — `CreateParticipantModal` takes an optional `eventId` and, on success, also calls
+  `POST /registrations` to register the new participant to that event in one step. If
+  registration fails (e.g. missing license for a CME-credit event) the participant still
+  exists but the modal reports the failure clearly rather than silently losing it.
+- **Event lifecycle**: `Events.status` (`active` default / `closed`) added — new column +
+  Alembic migration. `POST /events/{id}/close` (admin-only, idempotency-guarded — 400 if
+  already closed). Closing an event blocks further `POST /attendance/sign-in` and
+  `/sign-out` for its registrations (`"This event is closed"`, 400) and hides staff's
+  "+ New Participant" button once closed. Anyone never signed in on a closed event now
+  reads as **Absent** (not "Not signed in") — both in the event detail table and in the
+  `/reports/attendance` export (`ABSENT` status alongside the existing `NOT SIGNED IN` /
+  `SIGNED IN` / `PRESENT`). Verified live: 403 for staff attempting to close, 400 on
+  double-close, sign-in correctly rejected post-close, and both the detail-page data and the
+  exported report agree on who's Absent.
+
+**Responsive/visual design pass (2026-09-07, same day)**: no backend changes. Established
+consistent patterns reused across every page: `rounded-xl border border-gray-200 bg-white
+shadow-sm` cards, a shared `Badge.jsx` (status/tone chips), consistent input/button/label
+classes, loading states on every list page. `Layout.jsx` header now wraps instead of
+overflowing on narrow widths and the content area widened to `max-w-6xl` for table-heavy
+pages. Forms switched from a fixed 2-column grid to `grid-cols-1 sm:grid-cols-2` so they
+stack on phones. `SignaturePad.jsx` was the one real functional fix, not just styling — it
+had a **fixed 360×140 canvas**, so on any container narrower than that it would have
+overflowed or (if CSS-scaled) drawn blurry/mis-mapped strokes; it now sizes itself to its
+container's actual width on mount (with `devicePixelRatio` scaling for crisp lines), which
+matters because `CheckInPage` is explicitly the tablet-facing screen per CONTEXT.md §31.
+Also bumped touch-target sizes on `CheckInPage`/`AttendanceCard` (larger inputs/buttons,
+`py-2.5`-`py-3`) for the same tablet-use reason. Verified: production build clean, every
+route still serves 200, and a live login + `GET /events` round-trip against the running
+backend still works — but **not visually verified in an actual browser** (Claude-in-Chrome
+still not connected in this environment); worth a real click-through, especially the
+signature pad on an actual tablet-sized viewport, before calling this done.
+
+**Suggested next step**: RBAC Phase 2 (participant edit endpoint + audit stamps) is still the
+next unaddressed backend gap. Email/WhatsApp remains blocked on a provider decision; full
+production deployment (Nginx/HTTPS, containerizing the app itself) remains open.

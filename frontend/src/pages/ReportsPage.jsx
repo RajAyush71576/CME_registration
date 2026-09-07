@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 
+const inputClass =
+  'w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100'
+
 export default function ReportsPage() {
   const [events, setEvents] = useState([])
   const [eventId, setEventId] = useState('')
@@ -48,19 +51,21 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <section>
-        <h1 className="mb-2 text-xl font-semibold">Attendance & Reporting Export</h1>
+    <div className="space-y-6">
+      <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+        <h1 className="mb-2 text-xl font-semibold text-gray-900">
+          Attendance &amp; Reporting Export
+        </h1>
         <p className="mb-4 text-sm text-gray-600">
           Exports a consolidated report (identity, event, sign-in/out timestamps, status,
-          device) for offline sharing. The central workbook remains the live source of truth.
+          device) for offline sharing. Postgres remains the live source of truth.
         </p>
 
-        <div className="flex gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row">
           <select
             value={eventId}
             onChange={(e) => setEventId(e.target.value)}
-            className="flex-1 rounded border px-3 py-2"
+            className={`${inputClass} sm:flex-1`}
           >
             <option value="">All events</option>
             {events.map((ev) => (
@@ -73,17 +78,21 @@ export default function ReportsPage() {
             type="button"
             onClick={handleDownload}
             disabled={downloading}
-            className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50"
+            className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {downloading ? 'Preparing...' : 'Download Report'}
           </button>
         </div>
-        {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+        {error && (
+          <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+        )}
       </section>
 
-      <section className="rounded border bg-white p-4">
-        <h2 className="mb-2 text-lg font-semibold">CME Observer Sign-Off Sheet</h2>
-        <p className="mb-3 text-sm text-gray-600">
+      <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+        <h2 className="mb-2 text-lg font-semibold text-gray-900">
+          CME Observer Sign-Off Sheet
+        </h2>
+        <p className="mb-4 text-sm text-gray-600">
           A colored, printable sheet listing only registrants who completed sign-out (i.e.
           met the event's approximate duration) — for one consolidated batch sign-off by the
           observer, rather than individual signatures. Requires a specific event above.
@@ -92,14 +101,18 @@ export default function ReportsPage() {
           type="button"
           onClick={handleDownloadObserverSheet}
           disabled={!eventId || downloadingObserver}
-          className="rounded bg-purple-600 px-4 py-2 text-white disabled:opacity-50"
+          className="rounded-lg bg-purple-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {downloadingObserver ? 'Preparing...' : 'Download Observer Sheet'}
         </button>
         {!eventId && (
           <p className="mt-2 text-xs text-gray-400">Select an event above first.</p>
         )}
-        {observerError && <p className="mt-2 text-sm text-red-600">{observerError}</p>}
+        {observerError && (
+          <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+            {observerError}
+          </p>
+        )}
       </section>
     </div>
   )

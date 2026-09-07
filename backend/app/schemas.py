@@ -1,6 +1,6 @@
 """Pydantic request/response models for the Registration & Event API."""
 
-from datetime import date
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -24,7 +24,7 @@ class ParticipantCreate(BaseModel):
 
 class Participant(ParticipantCreate):
     participant_id: str
-    created_at: str
+    created_at: datetime
 
 
 class EventCreate(BaseModel):
@@ -39,6 +39,7 @@ class EventCreate(BaseModel):
 
 class Event(EventCreate):
     event_id: str
+    status: Literal["active", "closed"] = "active"
 
 
 class RegistrationCreate(BaseModel):
@@ -49,7 +50,7 @@ class RegistrationCreate(BaseModel):
 
 class Registration(RegistrationCreate):
     registration_id: str
-    registered_at: str
+    registered_at: datetime
 
 
 class LoginRequest(BaseModel):
@@ -84,9 +85,9 @@ class Attendance(BaseModel):
     attendance_id: str
     registration_id: str
     status: str
-    sign_in_time: str
+    sign_in_time: datetime
     sign_in_signature_ref: str
-    sign_out_time: str | None = None
+    sign_out_time: datetime | None = None
     sign_out_signature_ref: str | None = None
     device_id: str
 
@@ -101,14 +102,14 @@ class Certificate(BaseModel):
     event_id: str
     participant_id: str
     delivery_status: str
-    issued_at: str
+    issued_at: datetime
 
 
 class ImportBatch(BaseModel):
     batch_id: str
     source_file: str
     source_type: Literal["cme_website", "external_society"]
-    imported_at: str
+    imported_at: datetime
     imported_by: str
     row_count: int
     error_count: int

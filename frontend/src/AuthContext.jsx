@@ -24,9 +24,11 @@ export function AuthProvider({ children }) {
     const data = await api.login(email, password)
     setToken(data.access_token)
     setUser(data.user)
+    return data.user
   }
 
   const logout = () => {
+    api.logout().catch(() => {})
     setToken(null)
     setUser(null)
   }

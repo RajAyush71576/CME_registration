@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.excel_store import init_workbook
+from app.database import SessionLocal
 from app.routers import (
     attendance,
     auth,
@@ -20,8 +20,11 @@ from app.seed import seed_users
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    init_workbook()
-    seed_users()
+    db = SessionLocal()
+    try:
+        seed_users(db)
+    finally:
+        db.close()
     yield
 
 

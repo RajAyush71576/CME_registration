@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useAuth } from '../AuthContext'
 import { api } from '../api'
 import SignaturePad from '../SignaturePad'
 
@@ -6,7 +7,12 @@ function formatTime(iso) {
   return new Date(iso).toLocaleString()
 }
 
+const actionBtn =
+  'rounded-lg px-4 py-2.5 text-sm font-medium text-white shadow-sm transition disabled:cursor-not-allowed disabled:opacity-50'
+
 export default function AttendanceCard({ result, deviceId, onUpdated }) {
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'admin'
   const { participant, attendance, certificate, registration_id: registrationId } = result
   const [signature, setSignature] = useState(null)
   const [error, setError] = useState('')
@@ -69,36 +75,44 @@ export default function AttendanceCard({ result, deviceId, onUpdated }) {
     }
   }
 
+  const stateBorder = attendance?.sign_out_time
+    ? 'border-l-4 border-l-green-500'
+    : attendance
+      ? 'border-l-4 border-l-blue-500'
+      : 'border-l-4 border-l-gray-300'
+
   return (
-    <li className="py-3">
-      <div className="font-medium">
-        {participant.name}{' '}
-        <span className="text-gray-500">({participant.participant_type})</span>
+    <li className={`rounded-lg border border-gray-200 bg-white p-4 shadow-sm ${stateBorder}`}>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="font-medium text-gray-900">{participant.name}</span>
+        <span className="rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+          {participant.participant_type}
+        </span>
       </div>
-      <div className="text-sm text-gray-600">
+      <div className="mt-1 text-sm text-gray-600">
         {participant.designation} · {participant.phone} · {participant.email}
         {participant.medical_license_no ? ` · Lic. ${participant.medical_license_no}` : ''}
       </div>
-      <div className="text-xs text-gray-400">Registration ID: {registrationId}</div>
+      <div className="mt-0.5 font-mono text-xs text-gray-400">Reg. {registrationId}</div>
 
       {!attendance && (
-        <div className="mt-2">
+        <div className="mt-3">
           {!showPad ? (
             <button
               type="button"
               onClick={() => setShowPad(true)}
-              className="rounded bg-green-600 px-3 py-1.5 text-sm text-white"
+              className={`${actionBtn} bg-green-600 hover:bg-green-700`}
             >
               Sign In
             </button>
           ) : (
-            <div className="mt-2 space-y-2">
+            <div className="mt-2 space-y-3">
               <SignaturePad onChange={setSignature} />
               <button
                 type="button"
                 onClick={handleSignIn}
                 disabled={submitting}
-                className="rounded bg-green-600 px-3 py-1.5 text-sm text-white disabled:opacity-50"
+                className={`${actionBtn} bg-green-600 hover:bg-green-700`}
               >
                 {submitting ? 'Signing in...' : 'Confirm Sign In'}
               </button>
@@ -108,26 +122,26 @@ export default function AttendanceCard({ result, deviceId, onUpdated }) {
       )}
 
       {attendance && !attendance.sign_out_time && (
-        <div className="mt-2">
-          <p className="text-sm text-green-700">
+        <div className="mt-3">
+          <p className="text-sm font-medium text-blue-700">
             Signed in at {formatTime(attendance.sign_in_time)}
           </p>
           {!showPad ? (
             <button
               type="button"
               onClick={() => setShowPad(true)}
-              className="mt-1 rounded bg-blue-600 px-3 py-1.5 text-sm text-white"
+              className={`${actionBtn} mt-2 bg-blue-600 hover:bg-blue-700`}
             >
               Sign Out
             </button>
           ) : (
-            <div className="mt-2 space-y-2">
+            <div className="mt-2 space-y-3">
               <SignaturePad onChange={setSignature} />
               <button
                 type="button"
                 onClick={handleSignOut}
                 disabled={submitting}
-                className="rounded bg-blue-600 px-3 py-1.5 text-sm text-white disabled:opacity-50"
+                className={`${actionBtn} bg-blue-600 hover:bg-blue-700`}
               >
                 {submitting ? 'Signing out...' : 'Confirm Sign Out'}
               </button>
@@ -137,38 +151,45 @@ export default function AttendanceCard({ result, deviceId, onUpdated }) {
       )}
 
       {attendance?.sign_out_time && (
-        <div className="mt-2">
-          <p className="text-sm text-gray-700">
+        <div className="mt-3">
+          <p className="text-sm font-medium text-green-700">
             Attendance complete: {formatTime(attendance.sign_in_time)} –{' '}
             {formatTime(attendance.sign_out_time)}
           </p>
 
-          {!certificate ? (
-            <button
-              type="button"
-              onClick={handleIssueCertificate}
-              disabled={issuing}
-              className="mt-2 rounded bg-purple-600 px-3 py-1.5 text-sm text-white disabled:opacity-50"
-            >
-              {issuing ? 'Issuing...' : 'Issue Certificate'}
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={handleDownloadCertificate}
-              disabled={downloading}
-              className="mt-2 rounded bg-purple-600 px-3 py-1.5 text-sm text-white disabled:opacity-50"
-            >
-              {downloading
-                ? 'Opening...'
-                : `Download Certificate No. ${certificate.certificate_no}`}
-            </button>
+          {isAdmin &&
+            (!certificate ? (
+              <button
+                type="button"
+                onClick={handleIssueCertificate}
+                disabled={issuing}
+                className={`${actionBtn} mt-2 bg-purple-600 hover:bg-purple-700`}
+              >
+                {issuing ? 'Issuing...' : 'Issue Certificate'}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleDownloadCertificate}
+                disabled={downloading}
+                className={`${actionBtn} mt-2 bg-purple-600 hover:bg-purple-700`}
+              >
+                {downloading
+                  ? 'Opening...'
+                  : `Download Certificate No. ${certificate.certificate_no}`}
+              </button>
+            ))}
+          {certError && (
+            <p className="mt-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+              {certError}
+            </p>
           )}
-          {certError && <p className="mt-1 text-sm text-red-600">{certError}</p>}
         </div>
       )}
 
-      {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+      {error && (
+        <p className="mt-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+      )}
     </li>
   )
 }

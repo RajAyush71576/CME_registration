@@ -4,12 +4,14 @@ from datetime import datetime
 import openpyxl
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session
 
-from app import excel_store as store
-from app.auth import get_current_user
+from app import models
+from app.auth import require_admin
+from app.database import get_db
 
 router = APIRouter(
-    prefix="/reports", tags=["reports"], dependencies=[Depends(get_current_user)]
+    prefix="/reports", tags=["reports"], dependencies=[Depends(require_admin)]
 )
 
 COLUMNS = [
@@ -31,21 +33,20 @@ COLUMNS = [
 
 
 @router.get("/attendance")
-def export_attendance_report(event_id: str | None = None):
+def export_attendance_report(event_id: str | None = None, db: Session = Depends(get_db)):
     """Consolidated attendance export for offline reporting/sharing (CONTEXT.md
-    §14). The central workbook remains the live source of truth — this is a
-    point-in-time snapshot."""
-    participants_by_id = {
-        p["participant_id"]: p for p in store.list_rows("Participants")
-    }
-    events_by_id = {e["event_id"]: e for e in store.list_rows("Events")}
+    §14). Postgres remains the live source of truth — this is a point-in-time
+    snapshot."""
+    participants_by_id = {p.participant_id: p for p in db.query(models.Participant).all()}
+    events_by_id = {e.event_id: e for e in db.query(models.Event).all()}
     attendance_by_registration = {
-        a["registration_id"]: a for a in store.list_rows("Attendance")
+        a.registration_id: a for a in db.query(models.Attendance).all()
     }
 
-    registrations = store.list_rows("Registrations")
+    query = db.query(models.Registration)
     if event_id:
-        registrations = [r for r in registrations if r["event_id"] == event_id]
+        query = query.filter_by(event_id=event_id)
+    registrations = query.all()
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -53,35 +54,37 @@ def export_attendance_report(event_id: str | None = None):
     ws.append(COLUMNS)
 
     for reg in registrations:
-        participant = participants_by_id.get(reg["participant_id"])
-        event = events_by_id.get(reg["event_id"])
+        participant = participants_by_id.get(reg.participant_id)
+        event = events_by_id.get(reg.event_id)
         if participant is None or event is None:
             continue
-        attendance = attendance_by_registration.get(reg["registration_id"])
+        attendance = attendance_by_registration.get(reg.registration_id)
 
-        if attendance and attendance.get("sign_out_time"):
+        if attendance and attendance.sign_out_time:
             status = "PRESENT"
         elif attendance:
             status = "SIGNED IN"
+        elif event.status == "closed":
+            status = "ABSENT"
         else:
             status = "NOT SIGNED IN"
 
         ws.append(
             [
-                participant["name"],
-                participant["designation"],
-                participant["email"],
-                participant["phone"],
-                participant["participant_type"],
-                event["event_name"],
-                event["event_date"],
-                event["venue"],
-                reg["source"],
+                participant.name,
+                participant.designation,
+                participant.email,
+                participant.phone,
+                participant.participant_type,
+                event.event_name,
+                event.event_date.isoformat(),
+                event.venue,
+                reg.source,
                 status,
-                attendance["sign_in_time"] if attendance else None,
-                attendance.get("sign_out_time") if attendance else None,
+                attendance.sign_in_time.isoformat() if attendance else None,
+                attendance.sign_out_time.isoformat() if attendance and attendance.sign_out_time else None,
                 "Signature (tablet)" if attendance else None,
-                attendance.get("device_id") if attendance else None,
+                attendance.device_id if attendance else None,
             ]
         )
 
