@@ -17,7 +17,7 @@ export default function LoginPage() {
     setSubmitting(true)
     try {
       const user = await login(email, password)
-      const home = user.role === 'admin' ? '/admin/events' : '/staff/check-in'
+      const home = user.role === 'admin' ? '/admin/events' : '/staff/events'
       navigate(location.state?.from?.pathname || home, { replace: true })
     } catch (err) {
       setError(err.message)

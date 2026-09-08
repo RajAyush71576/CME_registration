@@ -7,10 +7,7 @@ const ADMIN_LINKS = [
   { to: '/admin/reports', label: 'Reports' },
 ]
 
-const STAFF_LINKS = [
-  { to: '/staff/events', label: 'Events' },
-  { to: '/staff/check-in', label: 'Check-In' },
-]
+const STAFF_LINKS = [{ to: '/staff/events', label: 'Events' }]
 
 export default function Layout() {
   const { user, logout } = useAuth()

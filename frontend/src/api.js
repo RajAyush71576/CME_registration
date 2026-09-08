@@ -56,6 +56,8 @@ export const api = {
   listParticipants: () => request('/participants'),
   createParticipant: (data) =>
     request('/participants', { method: 'POST', body: JSON.stringify(data) }),
+  updateParticipant: (participantId, data) =>
+    request(`/participants/${participantId}`, { method: 'PATCH', body: JSON.stringify(data) }),
 
   createRegistration: (data) =>
     request('/registrations', { method: 'POST', body: JSON.stringify(data) }),

@@ -3,7 +3,6 @@ import { useAuth } from './AuthContext'
 import Layout from './Layout'
 import RequireAuth from './RequireAuth'
 import RequireRole from './RequireRole'
-import CheckInPage from './pages/CheckInPage'
 import EventDetailPage from './pages/EventDetailPage'
 import EventsPage from './pages/EventsPage'
 import ImportPage from './pages/ImportPage'
@@ -14,7 +13,7 @@ import UnauthorizedPage from './pages/UnauthorizedPage'
 
 function HomeRedirect() {
   const { user } = useAuth()
-  return <Navigate to={user?.role === 'admin' ? '/admin/events' : '/staff/check-in'} replace />
+  return <Navigate to={user?.role === 'admin' ? '/admin/events' : '/staff/events'} replace />
 }
 
 function App() {
@@ -31,7 +30,6 @@ function App() {
         <Route index element={<HomeRedirect />} />
         <Route path="/unauthorized" element={<UnauthorizedPage />} />
         <Route path="/participants" element={<ParticipantsPage />} />
-        <Route path="/staff/check-in" element={<CheckInPage />} />
         <Route
           path="/staff/events"
           element={

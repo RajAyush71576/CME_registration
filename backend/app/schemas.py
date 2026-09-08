@@ -27,6 +27,18 @@ class Participant(ParticipantCreate):
     created_at: datetime
 
 
+class ParticipantUpdate(BaseModel):
+    name: str | None = None
+    designation: str | None = None
+    email: str | None = None
+    phone: str | None = None
+    whatsapp_number: str | None = None
+    place_of_work: str | None = None
+    country: str | None = None
+    medical_license_no: str | None = None
+    participant_type: ParticipantType | None = None
+
+
 class EventCreate(BaseModel):
     event_name: str
     event_date: date

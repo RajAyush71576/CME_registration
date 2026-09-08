@@ -5,7 +5,7 @@ from app import models
 from app.auth import get_current_user
 from app.database import get_db
 from app.db_utils import row_to_dict
-from app.schemas import Participant, ParticipantCreate
+from app.schemas import Participant, ParticipantCreate, ParticipantUpdate
 
 router = APIRouter(
     prefix="/participants",
@@ -33,4 +33,18 @@ def get_participant(participant_id: str, db: Session = Depends(get_db)):
     participant = db.query(models.Participant).filter_by(participant_id=participant_id).first()
     if participant is None:
         raise HTTPException(status_code=404, detail="Participant not found")
+    return row_to_dict(participant)
+
+
+@router.patch("/{participant_id}", response_model=Participant)
+def update_participant(
+    participant_id: str, payload: ParticipantUpdate, db: Session = Depends(get_db)
+):
+    participant = db.query(models.Participant).filter_by(participant_id=participant_id).first()
+    if participant is None:
+        raise HTTPException(status_code=404, detail="Participant not found")
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(participant, field, value)
+    db.commit()
+    db.refresh(participant)
     return row_to_dict(participant)

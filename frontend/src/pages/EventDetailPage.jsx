@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import { api } from '../api'
 import Badge from '../Badge'
 import CreateParticipantModal from './CreateParticipantModal'
+import ParticipantDetailModal from './ParticipantDetailModal'
 
 function attendanceStatus(attendance, eventStatus) {
   if (!attendance) return eventStatus === 'closed' ? 'Absent' : 'Not signed in'
@@ -30,6 +31,8 @@ export default function EventDetailPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [closing, setClosing] = useState(false)
   const [closeError, setCloseError] = useState('')
+  const [selectedRegistrationId, setSelectedRegistrationId] = useState(null)
+  const [query, setQuery] = useState('')
 
   const loadRegistrations = () =>
     api.listEventRegistrations(eventId).then(setRegistrations).catch((e) => setError(e.message))
@@ -66,6 +69,26 @@ export default function EventDetailPage() {
     setShowCreate(false)
     loadRegistrations()
   }
+
+  const selectedRegistration = registrations.find(
+    (r) => r.registration_id === selectedRegistrationId,
+  )
+
+  const filteredRegistrations = useMemo(() => {
+    const needle = query.trim().toLowerCase()
+    if (!needle) return registrations
+    return registrations.filter((r) =>
+      [
+        r.participant.name,
+        r.participant.designation,
+        r.participant.phone,
+        r.participant.email,
+        r.participant.participant_type,
+      ]
+        .filter(Boolean)
+        .some((field) => field.toLowerCase().includes(needle)),
+    )
+  }, [registrations, query])
 
   if (loading) return <p className="text-sm text-gray-500">Loading...</p>
   if (error)
@@ -140,9 +163,20 @@ export default function EventDetailPage() {
 
       <section>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Participants <span className="text-gray-400">({registrations.length})</span>
-          </h2>
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Participants{' '}
+              <span className="text-gray-400">
+                ({query ? `${filteredRegistrations.length} of ${registrations.length}` : registrations.length})
+              </span>
+            </h2>
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search participants"
+              className="w-48 rounded-lg border border-gray-300 py-1.5 px-2.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+            />
+          </div>
           {!isAdmin && event.status !== 'closed' && (
             <button
               type="button"
@@ -167,10 +201,14 @@ export default function EventDetailPage() {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {registrations.map((r) => {
+              {filteredRegistrations.map((r) => {
                 const status = attendanceStatus(r.attendance, event.status)
                 return (
-                  <tr key={r.registration_id} className="hover:bg-gray-50">
+                  <tr
+                    key={r.registration_id}
+                    onClick={() => setSelectedRegistrationId(r.registration_id)}
+                    className="cursor-pointer hover:bg-gray-50"
+                  >
                     <td className="whitespace-nowrap px-4 py-3 font-medium text-gray-900">
                       {r.participant.name}
                     </td>
@@ -192,10 +230,12 @@ export default function EventDetailPage() {
                   </tr>
                 )
               })}
-              {registrations.length === 0 && (
+              {filteredRegistrations.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-4 py-10 text-center text-gray-500">
-                    No participants registered for this event yet.
+                    {registrations.length === 0
+                      ? 'No participants registered for this event yet.'
+                      : 'No participants match your search.'}
                   </td>
                 </tr>
               )}
@@ -209,6 +249,16 @@ export default function EventDetailPage() {
           eventId={eventId}
           onClose={() => setShowCreate(false)}
           onCreated={handleCreated}
+        />
+      )}
+
+      {selectedRegistration && (
+        <ParticipantDetailModal
+          registration={selectedRegistration}
+          eventStatus={event.status}
+          approxDurationHours={event.approx_duration_hours}
+          onClose={() => setSelectedRegistrationId(null)}
+          onUpdated={loadRegistrations}
         />
       )}
     </div>

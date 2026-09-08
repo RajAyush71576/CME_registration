@@ -19,12 +19,23 @@ const labelClass = 'mb-1 block text-sm font-medium text-gray-700'
 
 export default function CreateParticipantModal({ onClose, onCreated, eventId }) {
   const [form, setForm] = useState(emptyForm)
+  const [sameAsPhone, setSameAsPhone] = useState(false)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    setForm((f) => ({ ...f, [name]: value }))
+    setForm((f) => ({
+      ...f,
+      [name]: value,
+      ...(name === 'phone' && sameAsPhone ? { whatsapp_number: value } : {}),
+    }))
+  }
+
+  const handleSameAsPhoneChange = (e) => {
+    const checked = e.target.checked
+    setSameAsPhone(checked)
+    if (checked) setForm((f) => ({ ...f, whatsapp_number: f.phone }))
   }
 
   const handleSubmit = async (e) => {
@@ -64,7 +75,7 @@ export default function CreateParticipantModal({ onClose, onCreated, eventId }) 
       onClick={onClose}
     >
       <div
-        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl"
+        className="max-h-[95vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-5 flex items-center justify-between">
@@ -134,13 +145,25 @@ export default function CreateParticipantModal({ onClose, onCreated, eventId }) 
             />
           </div>
           <div>
-            <label className={labelClass}>WhatsApp number</label>
+            <div className="mb-1 flex flex-nowrap items-center justify-between gap-2">
+              <label className={`${labelClass} mb-0 whitespace-nowrap`}>WhatsApp number</label>
+              <label className="flex shrink-0 items-center gap-1.5 whitespace-nowrap text-xs font-medium text-gray-600">
+                <input
+                  type="checkbox"
+                  checked={sameAsPhone}
+                  onChange={handleSameAsPhoneChange}
+                  className="h-3.5 w-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                Same as phone
+              </label>
+            </div>
             <input
               name="whatsapp_number"
               value={form.whatsapp_number}
               onChange={handleChange}
               required
-              className={inputClass}
+              disabled={sameAsPhone}
+              className={`${inputClass} ${sameAsPhone ? 'bg-gray-100 text-gray-500' : ''}`}
             />
           </div>
           <div>
