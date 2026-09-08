@@ -9,7 +9,6 @@ import ImportPage from './pages/ImportPage'
 import LoginPage from './pages/LoginPage'
 import ParticipantsPage from './pages/ParticipantsPage'
 import ReportsPage from './pages/ReportsPage'
-import UnauthorizedPage from './pages/UnauthorizedPage'
 
 function HomeRedirect() {
   const { user } = useAuth()
@@ -28,7 +27,6 @@ function App() {
         }
       >
         <Route index element={<HomeRedirect />} />
-        <Route path="/unauthorized" element={<UnauthorizedPage />} />
         <Route path="/participants" element={<ParticipantsPage />} />
         <Route
           path="/staff/events"
