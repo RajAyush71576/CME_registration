@@ -186,7 +186,7 @@ export default function ParticipantDetailModal({
           <div className="rounded-lg border border-gray-200 p-4">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-sm font-semibold text-gray-900">Participant details</h3>
-              {!attendance?.sign_out_time && (
+              {!attendance?.sign_out_time && !isAdmin && (
                 <button
                   type="button"
                   onClick={() => setEditing(true)}
@@ -364,7 +364,7 @@ export default function ParticipantDetailModal({
             </p>
           )}
 
-          {!eventClosed && !attendance && (
+          {!eventClosed && !isAdmin && !attendance && (
             <div>
               {!showPad ? (
                 <button

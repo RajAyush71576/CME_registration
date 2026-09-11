@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app import models
-from app.auth import get_current_user
+from app.auth import get_current_user, require_staff
 from app.database import get_db
 from app.db_utils import row_to_dict
 from app.schemas import Participant, ParticipantCreate, ParticipantUpdate
@@ -36,7 +36,7 @@ def get_participant(participant_id: str, db: Session = Depends(get_db)):
     return row_to_dict(participant)
 
 
-@router.patch("/{participant_id}", response_model=Participant)
+@router.patch("/{participant_id}", response_model=Participant, dependencies=[Depends(require_staff)])
 def update_participant(
     participant_id: str, payload: ParticipantUpdate, db: Session = Depends(get_db)
 ):

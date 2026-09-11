@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import models
-from app.auth import get_current_user
+from app.auth import get_current_user, require_staff
 from app.database import get_db
 from app.db_utils import row_to_dict
 from app.schemas import Attendance, AttendanceSignIn, AttendanceSignOut
@@ -17,7 +17,9 @@ router = APIRouter(
 )
 
 
-@router.post("/sign-in", response_model=Attendance, status_code=201)
+@router.post(
+    "/sign-in", response_model=Attendance, status_code=201, dependencies=[Depends(require_staff)]
+)
 def sign_in(payload: AttendanceSignIn, db: Session = Depends(get_db)):
     registration = (
         db.query(models.Registration)

@@ -1,12 +1,12 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
-let token = localStorage.getItem('cme_token') || null
+let token = sessionStorage.getItem('cme_token') || null
 let unauthorizedHandler = null
 
 export function setToken(newToken) {
   token = newToken
-  if (newToken) localStorage.setItem('cme_token', newToken)
-  else localStorage.removeItem('cme_token')
+  if (newToken) sessionStorage.setItem('cme_token', newToken)
+  else sessionStorage.removeItem('cme_token')
 }
 
 export function getToken() {
