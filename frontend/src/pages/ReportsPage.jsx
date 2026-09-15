@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { api } from '../api'
 
 const inputClass =
-  'w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100'
+  'w-full rounded-md border-2 border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20 dark:border-green-600 dark:bg-[#2a3743] dark:text-white dark:focus:border-green-400'
 
 export default function ReportsPage() {
   const [events, setEvents] = useState([])
@@ -52,11 +52,11 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
-        <h1 className="mb-2 text-xl font-semibold text-gray-900">
+      <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6 dark:border-slate-700/60 dark:bg-[#232f3b]">
+        <h1 className="mb-2 text-xl font-semibold text-gray-900 dark:text-white">
           Attendance &amp; Reporting Export
         </h1>
-        <p className="mb-4 text-sm text-gray-600">
+        <p className="mb-4 text-sm text-gray-600 dark:text-slate-400">
           Exports a consolidated report (identity, event, sign-in/out timestamps, status,
           device) for offline sharing. Postgres remains the live source of truth.
         </p>
@@ -78,21 +78,21 @@ export default function ReportsPage() {
             type="button"
             onClick={handleDownload}
             disabled={downloading}
-            className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-md bg-green-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-green-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {downloading ? 'Preparing...' : 'Download Report'}
           </button>
         </div>
         {error && (
-          <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+          <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">{error}</p>
         )}
       </section>
 
-      <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
-        <h2 className="mb-2 text-lg font-semibold text-gray-900">
+      <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6 dark:border-slate-700/60 dark:bg-[#232f3b]">
+        <h2 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">
           CME Observer Sign-Off Sheet
         </h2>
-        <p className="mb-4 text-sm text-gray-600">
+        <p className="mb-4 text-sm text-gray-600 dark:text-slate-400">
           A colored, printable sheet listing only registrants who completed sign-out (i.e.
           met the event's approximate duration) — for one consolidated batch sign-off by the
           observer, rather than individual signatures. Requires a specific event above.
@@ -101,15 +101,15 @@ export default function ReportsPage() {
           type="button"
           onClick={handleDownloadObserverSheet}
           disabled={!eventId || downloadingObserver}
-          className="rounded-lg bg-purple-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-md bg-purple-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {downloadingObserver ? 'Preparing...' : 'Download Observer Sheet'}
         </button>
         {!eventId && (
-          <p className="mt-2 text-xs text-gray-400">Select an event above first.</p>
+          <p className="mt-2 text-xs text-gray-400 dark:text-slate-500">Select an event above first.</p>
         )}
         {observerError && (
-          <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">
             {observerError}
           </p>
         )}

@@ -7,13 +7,21 @@ import SignaturePad from '../SignaturePad'
 const DEVICE_ID = 'STAFF-PORTAL'
 
 const inputClass =
-  'w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100'
-const labelClass = 'mb-1 block text-sm font-medium text-gray-700'
+  'w-full rounded-md border-2 border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20 dark:border-green-600 dark:bg-[#2a3743] dark:text-white dark:placeholder-slate-500 dark:focus:border-green-400'
+const labelClass = 'mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-slate-400'
 const actionBtn =
   'rounded-lg px-4 py-2.5 text-sm font-medium text-white shadow-sm transition disabled:cursor-not-allowed disabled:opacity-50'
 
 function formatTime(iso) {
   return new Date(iso).toLocaleString()
+}
+
+function formatStartTime(timeStr) {
+  if (!timeStr) return ''
+  const [h, m] = timeStr.split(':').map(Number)
+  const d = new Date()
+  d.setHours(h, m, 0, 0)
+  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 }
 
 function attendanceStatus(attendance, eventStatus) {
@@ -32,6 +40,8 @@ function statusTone(status) {
 export default function ParticipantDetailModal({
   registration,
   eventStatus,
+  eventDate,
+  eventStartTime,
   approxDurationHours,
   onClose,
   onUpdated,
@@ -40,6 +50,12 @@ export default function ParticipantDetailModal({
   const isAdmin = user?.role === 'admin'
   const { participant, attendance, certificate, registration_id: registrationId } = registration
   const eventClosed = eventStatus === 'closed'
+
+  const todayUtc = new Date().toISOString().slice(0, 10)
+  const isEventDay = eventDate === todayUtc
+  const eventStartsAt =
+    eventDate && eventStartTime ? new Date(`${eventDate}T${eventStartTime}Z`).getTime() : null
+  const signInAvailable = eventStartsAt == null || (isEventDay && Date.now() >= eventStartsAt)
 
   const remainingHours =
     attendance && !attendance.sign_out_time
@@ -159,20 +175,20 @@ export default function ParticipantDetailModal({
       onClick={onClose}
     >
       <div
-        className="max-h-[95vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl"
+        className="max-h-[95vh] w-full max-w-4xl overflow-y-auto rounded-xl border border-gray-200 bg-white p-4 shadow-xl sm:p-6 dark:border-slate-700/60 dark:bg-[#232f3b]"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="mb-4 flex items-start justify-between gap-3 border-b border-gray-200 pb-4 dark:border-slate-700/60">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">{participant.name}</h2>
-            <div className="mt-0.5 font-mono text-xs text-gray-400">Reg. {registrationId}</div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{participant.name}</h2>
+            <div className="mt-0.5 font-mono text-xs text-gray-400 dark:text-slate-500">Reg. {registrationId}</div>
           </div>
           <div className="flex items-center gap-2">
             <Badge tone={statusTone(status)}>{status}</Badge>
             <button
               type="button"
               onClick={onClose}
-              className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+              className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white"
               aria-label="Close"
             >
               ✕
@@ -180,17 +196,17 @@ export default function ParticipantDetailModal({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2 xl:items-start">
         {/* Participant details / edit form */}
         {!editing || attendance?.sign_out_time ? (
-          <div className="rounded-lg border border-gray-200 p-4">
+          <div className="rounded-lg border border-gray-200 p-4 dark:border-slate-700/60">
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-gray-900">Participant details</h3>
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Participant details</h3>
               {!attendance?.sign_out_time && !isAdmin && (
                 <button
                   type="button"
                   onClick={() => setEditing(true)}
-                  className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                  className="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                 >
                   Edit
                 </button>
@@ -198,36 +214,36 @@ export default function ParticipantDetailModal({
             </div>
             <dl className="grid grid-cols-1 gap-x-4 gap-y-2 text-sm sm:grid-cols-2">
               <div>
-                <dt className="text-gray-500">Designation</dt>
-                <dd className="font-medium text-gray-900">{participant.designation}</dd>
+                <dt className="text-gray-500 dark:text-slate-500">Designation</dt>
+                <dd className="font-medium text-gray-900 dark:text-slate-200">{participant.designation}</dd>
               </div>
               <div>
-                <dt className="text-gray-500">Type</dt>
-                <dd className="font-medium text-gray-900">{participant.participant_type}</dd>
+                <dt className="text-gray-500 dark:text-slate-500">Type</dt>
+                <dd className="font-medium text-gray-900 dark:text-slate-200">{participant.participant_type}</dd>
               </div>
               <div>
-                <dt className="text-gray-500">Phone</dt>
-                <dd className="font-medium text-gray-900">{participant.phone}</dd>
+                <dt className="text-gray-500 dark:text-slate-500">Phone</dt>
+                <dd className="font-medium text-gray-900 dark:text-slate-200">{participant.phone}</dd>
               </div>
               <div>
-                <dt className="text-gray-500">WhatsApp</dt>
-                <dd className="font-medium text-gray-900">{participant.whatsapp_number}</dd>
+                <dt className="text-gray-500 dark:text-slate-500">WhatsApp</dt>
+                <dd className="font-medium text-gray-900 dark:text-slate-200">{participant.whatsapp_number}</dd>
               </div>
               <div className="sm:col-span-2">
-                <dt className="text-gray-500">Email</dt>
-                <dd className="font-medium text-gray-900">{participant.email}</dd>
+                <dt className="text-gray-500 dark:text-slate-500">Email</dt>
+                <dd className="font-medium text-gray-900 dark:text-slate-200">{participant.email}</dd>
               </div>
               <div>
-                <dt className="text-gray-500">Place of work</dt>
-                <dd className="font-medium text-gray-900">{participant.place_of_work}</dd>
+                <dt className="text-gray-500 dark:text-slate-500">Place of work</dt>
+                <dd className="font-medium text-gray-900 dark:text-slate-200">{participant.place_of_work}</dd>
               </div>
               <div>
-                <dt className="text-gray-500">Country</dt>
-                <dd className="font-medium text-gray-900">{participant.country || '—'}</dd>
+                <dt className="text-gray-500 dark:text-slate-500">Country</dt>
+                <dd className="font-medium text-gray-900 dark:text-slate-200">{participant.country || '—'}</dd>
               </div>
               <div className="sm:col-span-2">
-                <dt className="text-gray-500">Medical license no.</dt>
-                <dd className="font-medium text-gray-900">
+                <dt className="text-gray-500 dark:text-slate-500">Medical license no.</dt>
+                <dd className="font-medium text-gray-900 dark:text-slate-200">
                   {participant.medical_license_no || '—'}
                 </dd>
               </div>
@@ -236,7 +252,7 @@ export default function ParticipantDetailModal({
         ) : (
           <form
             onSubmit={handleSaveEdit}
-            className="grid grid-cols-1 gap-3 rounded-lg border border-gray-200 p-4 sm:grid-cols-2"
+            className="grid grid-cols-1 gap-3 rounded-lg border border-gray-200 p-4 sm:grid-cols-2 dark:border-slate-700/60"
           >
             <div className="sm:col-span-2">
               <label className={labelClass}>Name</label>
@@ -330,7 +346,7 @@ export default function ParticipantDetailModal({
               />
             </div>
             {editError && (
-              <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 sm:col-span-2">
+              <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 sm:col-span-2 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">
                 {editError}
               </p>
             )}
@@ -338,14 +354,14 @@ export default function ParticipantDetailModal({
               <button
                 type="button"
                 onClick={() => setEditing(false)}
-                className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                className="rounded-md border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-white/5"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={savingEdit}
-                className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-md bg-green-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-green-500 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {savingEdit ? 'Saving...' : 'Save changes'}
               </button>
@@ -355,18 +371,24 @@ export default function ParticipantDetailModal({
 
         {/* Attendance / sign-in-out + certificate */}
         <div className="space-y-4">
-        <div className="rounded-lg border border-gray-200 p-4">
-          <h3 className="mb-3 text-sm font-semibold text-gray-900">Attendance</h3>
+        <div className="rounded-lg border border-gray-200 p-4 dark:border-slate-700/60">
+          <h3 className="mb-3 text-sm font-semibold text-gray-900 dark:text-white">Attendance</h3>
 
           {eventClosed && (
-            <p className="rounded-md bg-gray-100 px-3 py-2 text-sm text-gray-600">
+            <p className="rounded-md bg-gray-100 px-3 py-2 text-sm text-gray-600 dark:bg-slate-700/40 dark:text-slate-300">
               This event is closed — sign-in and sign-out are no longer available.
             </p>
           )}
 
           {!eventClosed && !isAdmin && !attendance && (
             <div>
-              {!showPad ? (
+              {!signInAvailable ? (
+                <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
+                  {isEventDay
+                    ? `Sign-in opens at ${formatStartTime(eventStartTime)} today.`
+                    : 'Sign-in is only available on the day of the event.'}
+                </p>
+              ) : !showPad ? (
                 <button
                   type="button"
                   onClick={() => setShowPad(true)}
@@ -392,11 +414,11 @@ export default function ParticipantDetailModal({
 
           {!eventClosed && attendance && !attendance.sign_out_time && (
             <div>
-              <p className="mb-2 text-sm font-medium text-blue-700">
+              <p className="mb-2 text-sm font-medium text-blue-700 dark:text-blue-400">
                 Signed in at {formatTime(attendance.sign_in_time)}
               </p>
-              {!signOffAvailable ? (
-                <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-700">
+              {isAdmin ? null : !signOffAvailable ? (
+                <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
                   Sign-off not yet available: {remainingHours.toFixed(2)}h remaining to meet the
                   event's approximate duration ({Number(approxDurationHours)}h).
                 </p>
@@ -425,18 +447,18 @@ export default function ParticipantDetailModal({
           )}
 
           {attendance?.sign_out_time && (
-            <p className="text-sm font-medium text-green-700">
+            <p className="text-sm font-medium text-green-700 dark:text-green-400">
               Attendance complete: {formatTime(attendance.sign_in_time)} –{' '}
               {formatTime(attendance.sign_out_time)}
             </p>
           )}
 
           {eventClosed && !attendance && (
-            <p className="mt-2 text-sm text-gray-500">No attendance recorded.</p>
+            <p className="mt-2 text-sm text-gray-500 dark:text-slate-500">No attendance recorded.</p>
           )}
 
           {attendanceError && (
-            <p className="mt-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+            <p className="mt-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">
               {attendanceError}
             </p>
           )}
@@ -444,8 +466,8 @@ export default function ParticipantDetailModal({
 
         {/* Certificate */}
         {attendance?.sign_out_time && isAdmin && (
-          <div className="rounded-lg border border-gray-200 p-4">
-            <h3 className="mb-3 text-sm font-semibold text-gray-900">Certificate</h3>
+          <div className="rounded-lg border border-gray-200 p-4 dark:border-slate-700/60">
+            <h3 className="mb-3 text-sm font-semibold text-gray-900 dark:text-white">Certificate</h3>
             {!certificate ? (
               <button
                 type="button"
@@ -468,7 +490,7 @@ export default function ParticipantDetailModal({
               </button>
             )}
             {certError && (
-              <p className="mt-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+              <p className="mt-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">
                 {certError}
               </p>
             )}

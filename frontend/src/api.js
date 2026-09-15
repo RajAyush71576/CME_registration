@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API_URL = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:8000`
 
 let token = sessionStorage.getItem('cme_token') || null
 let unauthorizedHandler = null
@@ -50,6 +50,8 @@ export const api = {
   createEvent: (data) =>
     request('/events', { method: 'POST', body: JSON.stringify(data) }),
   closeEvent: (eventId) => request(`/events/${eventId}/close`, { method: 'POST' }),
+  updateEvent: (eventId, data) =>
+    request(`/events/${eventId}`, { method: 'PATCH', body: JSON.stringify(data) }),
 
   listEventRegistrations: (eventId) => request(`/registrations/by-event/${eventId}`),
 

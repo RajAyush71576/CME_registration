@@ -4,11 +4,14 @@ from datetime import datetime
 import openpyxl
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
+from openpyxl.drawing.image import Image as XLImage
+from openpyxl.utils import get_column_letter
 from sqlalchemy.orm import Session
 
 from app import models
 from app.auth import require_admin
 from app.database import get_db
+from app.signature_store import SIGNATURES_DIR
 
 router = APIRouter(
     prefix="/reports", tags=["reports"], dependencies=[Depends(require_admin)]
@@ -29,7 +32,25 @@ COLUMNS = [
     "Sign-out Time",
     "Verification Method",
     "Device ID",
+    "CME Credits Earned",
+    "Sign-in Signature",
+    "Sign-out Signature",
 ]
+
+SIGNATURE_COL_WIDTH = 18
+SIGNATURE_ROW_HEIGHT = 45
+SIGNATURE_IMG_SIZE = (110, 55)
+
+
+def _embed_signature(ws, row: int, col: int, ref: str | None) -> None:
+    if not ref:
+        return
+    path = SIGNATURES_DIR.parent / ref
+    if not path.is_file():
+        return
+    img = XLImage(str(path))
+    img.width, img.height = SIGNATURE_IMG_SIZE
+    ws.add_image(img, f"{get_column_letter(col)}{row}")
 
 
 @router.get("/attendance")
@@ -53,6 +74,12 @@ def export_attendance_report(event_id: str | None = None, db: Session = Depends(
     ws.title = "Attendance"
     ws.append(COLUMNS)
 
+    sign_in_col = COLUMNS.index("Sign-in Signature") + 1
+    sign_out_col = COLUMNS.index("Sign-out Signature") + 1
+    ws.column_dimensions[get_column_letter(sign_in_col)].width = SIGNATURE_COL_WIDTH
+    ws.column_dimensions[get_column_letter(sign_out_col)].width = SIGNATURE_COL_WIDTH
+
+    row_num = 1
     for reg in registrations:
         participant = participants_by_id.get(reg.participant_id)
         event = events_by_id.get(reg.event_id)
@@ -85,8 +112,18 @@ def export_attendance_report(event_id: str | None = None, db: Session = Depends(
                 attendance.sign_out_time.isoformat() if attendance and attendance.sign_out_time else None,
                 "Signature (tablet)" if attendance else None,
                 attendance.device_id if attendance else None,
+                float(event.cme_credits)
+                if status == "PRESENT" and event.cme_credits
+                else None,
+                None,
+                None,
             ]
         )
+        row_num += 1
+        if attendance:
+            ws.row_dimensions[row_num].height = SIGNATURE_ROW_HEIGHT
+            _embed_signature(ws, row_num, sign_in_col, attendance.sign_in_signature_ref)
+            _embed_signature(ws, row_num, sign_out_col, attendance.sign_out_signature_ref)
 
     buf = io.BytesIO()
     wb.save(buf)

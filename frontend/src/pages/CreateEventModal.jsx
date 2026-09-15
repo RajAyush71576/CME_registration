@@ -4,16 +4,17 @@ import { api } from '../api'
 const emptyForm = {
   event_name: '',
   event_date: '',
+  start_time: '09:00',
   venue: '',
   organizing_doctors: '',
   department: '',
-  cme_credits: false,
+  cme_credits: '',
   approx_duration_hours: '',
 }
 
 const inputClass =
-  'w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100'
-const labelClass = 'mb-1 block text-sm font-medium text-gray-700'
+  'w-full rounded-md border-2 border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20 dark:border-green-600 dark:bg-[#2a3743] dark:text-white dark:placeholder-slate-500 dark:focus:border-green-400'
+const labelClass = 'mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-slate-400'
 
 export default function CreateEventModal({ onClose, onCreated }) {
   const [form, setForm] = useState(emptyForm)
@@ -37,6 +38,7 @@ export default function CreateEventModal({ onClose, onCreated }) {
           .map((d) => d.trim())
           .filter(Boolean),
         approx_duration_hours: Number(form.approx_duration_hours),
+        cme_credits: Number(form.cme_credits) || 0,
       })
       onCreated()
     } catch (err) {
@@ -52,15 +54,15 @@ export default function CreateEventModal({ onClose, onCreated }) {
       onClick={onClose}
     >
       <div
-        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl"
+        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-gray-200 bg-white p-6 shadow-xl dark:border-slate-700/60 dark:bg-[#232f3b]"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">New Event</h2>
+        <div className="mb-5 flex items-center justify-between border-b border-gray-200 pb-4 dark:border-slate-700/60">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">New Event</h2>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white"
             aria-label="Close"
           >
             ✕
@@ -84,6 +86,17 @@ export default function CreateEventModal({ onClose, onCreated }) {
               type="date"
               name="event_date"
               value={form.event_date}
+              onChange={handleChange}
+              required
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className={labelClass}>Start time</label>
+            <input
+              type="time"
+              name="start_time"
+              value={form.start_time}
               onChange={handleChange}
               required
               className={inputClass}
@@ -131,18 +144,21 @@ export default function CreateEventModal({ onClose, onCreated }) {
               className={inputClass}
             />
           </div>
-          <label className="flex items-center gap-2 text-sm text-gray-700 sm:col-span-2">
+          <div>
+            <label className={labelClass}>CME credits</label>
             <input
-              type="checkbox"
+              type="number"
+              step="0.5"
+              min="0"
               name="cme_credits"
-              checked={form.cme_credits}
+              value={form.cme_credits}
               onChange={handleChange}
-              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              placeholder="0"
+              className={`${inputClass} w-24`}
             />
-            CME credits
-          </label>
+          </div>
           {error && (
-            <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 sm:col-span-2">
+            <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 sm:col-span-2 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">
               {error}
             </p>
           )}
@@ -150,14 +166,14 @@ export default function CreateEventModal({ onClose, onCreated }) {
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+              className="rounded-md border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-white/5"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-md bg-green-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-green-500 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {submitting ? 'Creating...' : 'Create Event'}
             </button>

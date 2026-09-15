@@ -33,6 +33,18 @@ def sign_in(payload: AttendanceSignIn, db: Session = Depends(get_db)):
     if event.status == "closed":
         raise HTTPException(status_code=400, detail="This event is closed")
 
+    now = datetime.now(timezone.utc)
+    if event.event_date != now.date():
+        raise HTTPException(
+            status_code=400, detail="Sign-in is only available on the day of the event"
+        )
+    event_start = datetime.combine(event.event_date, event.start_time, tzinfo=timezone.utc)
+    if now < event_start:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Sign-in opens at {event.start_time.strftime('%H:%M')} on the day of the event",
+        )
+
     attendance_id = uuid.uuid4().hex
     signature_ref = save_signature(attendance_id, "sign_in", payload.signature)
     attendance = models.Attendance(
@@ -56,7 +68,11 @@ def sign_in(payload: AttendanceSignIn, db: Session = Depends(get_db)):
     return row_to_dict(attendance)
 
 
-@router.post("/{attendance_id}/sign-out", response_model=Attendance)
+@router.post(
+    "/{attendance_id}/sign-out",
+    response_model=Attendance,
+    dependencies=[Depends(require_staff)],
+)
 def sign_out(attendance_id: str, payload: AttendanceSignOut, db: Session = Depends(get_db)):
     attendance = db.query(models.Attendance).filter_by(attendance_id=attendance_id).first()
     if attendance is None:

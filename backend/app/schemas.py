@@ -1,6 +1,6 @@
 """Pydantic request/response models for the Registration & Event API."""
 
-from datetime import date, datetime
+from datetime import date, datetime, time
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -42,16 +42,21 @@ class ParticipantUpdate(BaseModel):
 class EventCreate(BaseModel):
     event_name: str
     event_date: date
+    start_time: time = time(9, 0)
     venue: str
     organizing_doctors: list[str] = Field(default_factory=list, max_length=3)
     department: str
-    cme_credits: bool
+    cme_credits: float = 0
     approx_duration_hours: float
 
 
 class Event(EventCreate):
     event_id: str
     status: Literal["active", "closed"] = "active"
+
+
+class EventUpdate(BaseModel):
+    start_time: time
 
 
 class RegistrationCreate(BaseModel):

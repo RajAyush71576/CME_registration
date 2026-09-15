@@ -19,19 +19,19 @@ function formatDateBlock(dateStr) {
 
 function StatChip({ icon, tone, count, label }) {
   const tones = {
-    blue: 'bg-blue-50 text-blue-600',
-    green: 'bg-green-50 text-green-600',
-    orange: 'bg-orange-50 text-orange-600',
-    purple: 'bg-purple-50 text-purple-600',
+    blue: 'bg-blue-50 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400',
+    green: 'bg-green-50 text-green-600 dark:bg-green-500/15 dark:text-green-400',
+    orange: 'bg-orange-50 text-orange-600 dark:bg-orange-500/15 dark:text-orange-400',
+    purple: 'bg-purple-50 text-purple-600 dark:bg-purple-500/15 dark:text-purple-400',
   }
   return (
-    <div className="flex items-center gap-2">
-      <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-sm ${tones[tone]}`}>
+    <div className="flex items-center gap-2.5">
+      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-base ${tones[tone]}`}>
         {icon}
       </span>
       <div className="leading-tight">
-        <div className="font-semibold text-gray-900">{count}</div>
-        <div className="text-xs text-gray-500">{label}</div>
+        <div className="font-semibold text-gray-900 dark:text-white">{count}</div>
+        <div className="text-xs text-gray-500 dark:text-slate-500">{label}</div>
       </div>
     </div>
   )
@@ -112,14 +112,14 @@ export default function EventsPage() {
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-gray-900">
-          All Events <span className="text-gray-400">({filteredEvents.length})</span>
+        <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
+          All Events <span className="text-gray-400 dark:text-slate-500">({filteredEvents.length})</span>
         </h1>
         {isAdmin && (
           <button
             type="button"
             onClick={() => setShowCreate(true)}
-            className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700"
+            className="rounded-md bg-green-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-green-500"
           >
             + Create Event
           </button>
@@ -128,7 +128,7 @@ export default function EventsPage() {
 
       <div className="mb-5 flex flex-col gap-3 sm:flex-row">
         <div className="relative sm:flex-1">
-          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500">
             🔍
           </span>
           <input
@@ -138,11 +138,11 @@ export default function EventsPage() {
               setPage(1)
             }}
             placeholder="Search events..."
-            className="w-full rounded-lg border border-gray-300 py-2.5 pl-9 pr-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+            className="w-full rounded-md border-2 border-gray-300 bg-white py-2.5 pl-9 pr-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20 dark:border-green-600 dark:bg-[#2a3743] dark:text-white dark:placeholder-slate-500 dark:focus:border-green-400"
           />
         </div>
         <div className="relative">
-          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500">
             ⚲
           </span>
           <select
@@ -151,7 +151,7 @@ export default function EventsPage() {
               setStatusFilter(e.target.value)
               setPage(1)
             }}
-            className="w-full appearance-none rounded-lg border border-gray-300 py-2.5 pl-9 pr-8 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 sm:w-40"
+            className="w-full appearance-none rounded-md border-2 border-gray-300 bg-white py-2.5 pl-9 pr-8 text-sm text-gray-900 shadow-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20 dark:border-green-600 dark:bg-[#2a3743] dark:text-white dark:focus:border-green-400 sm:w-40"
           >
             <option value="all">All Status</option>
             <option value="active">Active</option>
@@ -161,14 +161,14 @@ export default function EventsPage() {
       </div>
 
       {error && (
-        <p className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+        <p className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">{error}</p>
       )}
 
       {loading ? (
-        <p className="text-sm text-gray-500">Loading...</p>
+        <p className="text-sm text-gray-500 dark:text-slate-400">Loading...</p>
       ) : (
         <>
-          <div className="space-y-3">
+          <div className="space-y-4">
             {pageEvents.map((ev) => {
               const date = formatDateBlock(ev.event_date)
               const stats = eventStats[ev.event_id] || {
@@ -181,32 +181,29 @@ export default function EventsPage() {
                 <div
                   key={ev.event_id}
                   onClick={() => navigate(`${detailPrefix}/${ev.event_id}`)}
-                  className="flex cursor-pointer flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-colors hover:bg-gray-50 sm:flex-row sm:items-center sm:gap-5 sm:p-5"
+                  className="flex cursor-pointer flex-col gap-5 rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition-colors hover:bg-gray-50 dark:border-slate-700/60 dark:bg-[#232f3b] dark:hover:bg-[#28353f] sm:flex-row sm:items-center sm:gap-6 sm:p-6"
                 >
-                  <div className="flex w-20 shrink-0 flex-col items-center rounded-lg bg-indigo-50 px-2 py-2 text-indigo-600">
+                  <div className="flex w-20 shrink-0 flex-col items-center rounded-lg bg-indigo-50 px-2 py-3 text-indigo-600 dark:bg-green-500/10 dark:text-green-400">
                     <span className="text-xs font-semibold">{date.month}</span>
                     <span className="text-2xl font-bold leading-tight">{date.day}</span>
                     <span className="text-xs font-medium">{date.year}</span>
-                    <span className="text-[10px] text-indigo-400">{date.weekday}</span>
+                    <span className="mt-0.5 text-[10px] text-indigo-400 dark:text-green-500/70">{date.weekday}</span>
                   </div>
 
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-semibold text-gray-900">{ev.event_name}</span>
+                      <span className="font-semibold text-gray-900 dark:text-white">{ev.event_name}</span>
                       <Badge tone={ev.status === 'closed' ? 'gray' : 'green'}>
                         {ev.status === 'closed' ? 'Closed' : 'Active'}
                       </Badge>
                     </div>
-                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-gray-500">
+                    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-gray-500 dark:text-slate-400">
                       <span>📅 {ev.event_date}</span>
-                      <span>|</span>
                       <span>📍 {ev.venue}</span>
-                      <span>|</span>
-                      <span>🏷️ {ev.cme_credits ? 'CME credits' : 'No CME credits'}</span>
-                      <span>|</span>
+                      <span>🏷️ {ev.cme_credits > 0 ? `${ev.cme_credits} CME credits` : 'No CME credits'}</span>
                       <span>🕐 {ev.approx_duration_hours}h</span>
                     </div>
-                    <div className="mt-3 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:gap-6">
+                    <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 sm:flex sm:flex-wrap sm:gap-8">
                       <StatChip icon="👥" tone="blue" count={stats.participants} label="Participants" />
                       <StatChip icon="✅" tone="green" count={stats.signedIn} label="Signed In" />
                       <StatChip icon="⏱️" tone="orange" count={stats.completed} label="Completed" />
@@ -215,19 +212,19 @@ export default function EventsPage() {
                   </div>
 
                   <div
-                    className="flex shrink-0 items-center gap-2 self-start sm:self-center"
+                    className="flex shrink-0 items-center gap-3 self-start sm:self-center"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <button
                       type="button"
-                      className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                      className="flex h-9 w-9 items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:text-slate-500 dark:hover:bg-white/5 dark:hover:text-slate-300"
                       aria-label="More options"
                     >
                       ⋯
                     </button>
                     <span
                       onClick={() => navigate(`${detailPrefix}/${ev.event_id}`)}
-                      className="cursor-pointer text-xl text-gray-300"
+                      className="cursor-pointer text-xl text-gray-300 dark:text-slate-600"
                     >
                       ›
                     </span>
@@ -236,14 +233,14 @@ export default function EventsPage() {
               )
             })}
             {pageEvents.length === 0 && (
-              <div className="rounded-xl border border-gray-200 bg-white px-5 py-10 text-center text-sm text-gray-500 shadow-sm">
+              <div className="rounded-xl border border-gray-200 bg-white px-5 py-10 text-center text-sm text-gray-500 shadow-sm dark:border-slate-700/60 dark:bg-[#232f3b] dark:text-slate-400">
                 {query || statusFilter !== 'all' ? 'No events match your filters.' : 'No events yet.'}
               </div>
             )}
           </div>
 
           {filteredEvents.length > 0 && (
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-gray-500">
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-gray-500 dark:text-slate-500">
               <span>
                 Showing {pageStart + 1} to {Math.min(pageStart + PAGE_SIZE, filteredEvents.length)}{' '}
                 of {filteredEvents.length} events
@@ -253,7 +250,7 @@ export default function EventsPage() {
                   type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className="rounded-md p-1.5 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-gray-100 dark:hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40"
                   aria-label="Previous page"
                 >
                   ‹
@@ -263,10 +260,10 @@ export default function EventsPage() {
                     key={p}
                     type="button"
                     onClick={() => setPage(p)}
-                    className={`h-7 w-7 rounded-md text-sm font-medium ${
+                    className={`h-9 w-9 rounded-md text-sm font-medium ${
                       p === currentPage
-                        ? 'bg-blue-600 text-white'
-                        : 'text-gray-600 hover:bg-gray-100'
+                        ? 'bg-green-600 text-white'
+                        : 'text-gray-600 hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-white/5'
                     }`}
                   >
                     {p}
@@ -276,7 +273,7 @@ export default function EventsPage() {
                   type="button"
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
-                  className="rounded-md p-1.5 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-gray-100 dark:hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40"
                   aria-label="Next page"
                 >
                   ›

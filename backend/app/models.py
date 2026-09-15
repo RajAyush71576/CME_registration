@@ -13,17 +13,17 @@ and `EventCertificateCounter` for atomic per-event sequential numbering.
 """
 
 import uuid
-from datetime import datetime
+from datetime import datetime, time
 
 from sqlalchemy import (
     ARRAY,
-    Boolean,
     Date,
     DateTime,
     ForeignKey,
     Numeric,
     String,
     Text,
+    Time,
     UniqueConstraint,
     func,
 )
@@ -71,12 +71,13 @@ class Event(Base):
     event_id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_new_id)
     event_name: Mapped[str] = mapped_column(String, nullable=False)
     event_date: Mapped[datetime] = mapped_column(Date, nullable=False)
+    start_time: Mapped[time] = mapped_column(Time, nullable=False, server_default="09:00:00")
     venue: Mapped[str] = mapped_column(String, nullable=False)
     organizing_doctors: Mapped[list[str]] = mapped_column(
         ARRAY(String), nullable=False, default=list
     )
     department: Mapped[str] = mapped_column(String, nullable=False)
-    cme_credits: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    cme_credits: Mapped[float] = mapped_column(Numeric, nullable=False, default=0)
     approx_duration_hours: Mapped[float] = mapped_column(Numeric, nullable=False)
     status: Mapped[str] = mapped_column(String, nullable=False, server_default="active")
 

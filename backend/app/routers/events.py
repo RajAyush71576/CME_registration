@@ -5,7 +5,7 @@ from app import models
 from app.auth import get_current_user, require_admin
 from app.database import get_db
 from app.db_utils import row_to_dict
-from app.schemas import Event, EventCreate
+from app.schemas import Event, EventCreate, EventUpdate
 
 router = APIRouter(
     prefix="/events", tags=["events"], dependencies=[Depends(get_current_user)]
@@ -33,6 +33,19 @@ def get_event(event_id: str, db: Session = Depends(get_db)):
     event = db.query(models.Event).filter_by(event_id=event_id).first()
     if event is None:
         raise HTTPException(status_code=404, detail="Event not found")
+    return row_to_dict(event)
+
+
+@router.patch(
+    "/{event_id}", response_model=Event, dependencies=[Depends(require_admin)]
+)
+def update_event(event_id: str, payload: EventUpdate, db: Session = Depends(get_db)):
+    event = db.query(models.Event).filter_by(event_id=event_id).first()
+    if event is None:
+        raise HTTPException(status_code=404, detail="Event not found")
+    event.start_time = payload.start_time
+    db.commit()
+    db.refresh(event)
     return row_to_dict(event)
 
 

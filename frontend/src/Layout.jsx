@@ -1,5 +1,7 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from './AuthContext'
+import ThemeToggle from './ThemeToggle'
+import FullscreenToggle from './FullscreenToggle'
 
 const ADMIN_LINKS = [
   { to: '/admin/events', label: 'Events' },
@@ -20,10 +22,10 @@ export default function Layout() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="sticky top-0 z-20 border-b bg-white/95 backdrop-blur">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#1c2731]">
+      <header className="sticky top-0 z-20 border-b border-gray-200 bg-white/95 backdrop-blur dark:border-slate-700/60 dark:bg-[#212e39]/95">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
-          <span className="text-base font-semibold tracking-tight text-gray-900">
+          <span className="text-base font-semibold tracking-tight text-gray-900 dark:text-white">
             CME Registration
           </span>
 
@@ -33,10 +35,10 @@ export default function Layout() {
                 key={link.to}
                 to={link.to}
                 className={({ isActive }) =>
-                  `shrink-0 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                  `shrink-0 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                     isActive
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                      ? 'bg-green-50 text-green-700 dark:bg-green-500/15 dark:text-green-400'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white'
                   }`
                 }
               >
@@ -46,13 +48,15 @@ export default function Layout() {
           </nav>
 
           <div className="ml-auto flex items-center gap-3">
-            <span className="hidden text-sm text-gray-600 sm:inline">
-              {user?.name} <span className="text-gray-400">({user?.role})</span>
+            <span className="hidden text-sm text-gray-600 sm:inline dark:text-slate-300">
+              {user?.name} <span className="text-gray-400 dark:text-slate-500">({user?.role})</span>
             </span>
+            <FullscreenToggle />
+            <ThemeToggle />
             <button
               type="button"
               onClick={handleLogout}
-              className="rounded-md px-2.5 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+              className="rounded-md px-2.5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
             >
               Log out
             </button>

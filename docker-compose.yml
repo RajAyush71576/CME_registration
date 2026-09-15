@@ -1,7 +1,5 @@
-# Local-dev infrastructure only (Postgres + Redis). The backend (venv) and
-# frontend (npm) still run on the host as documented in README.md — full
-# containerization of the app itself is a separate, later step (see
-# CONTEXT.md Status: "production deployment").
+# Full stack: Postgres + Redis + backend (FastAPI) + frontend (React, served by nginx).
+# `docker compose up --build` starts everything; see README.md for details.
 
 services:
   postgres:
@@ -32,5 +30,31 @@ services:
       timeout: 5s
       retries: 10
 
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+psycopg2://cme:cme_dev_password@postgres:5432/cme_registration
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
+    ports:
+      - "8000:8000"
+    volumes:
+      - cme_signatures_data:/app/backend/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
 volumes:
   cme_postgres_data:
+  cme_signatures_data:

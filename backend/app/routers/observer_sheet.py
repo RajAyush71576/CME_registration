@@ -10,6 +10,7 @@ from app.auth import require_admin
 from app.database import get_db
 from app.db_utils import row_to_dict
 from app.observer_sheet_pdf import render_observer_sheet_pdf
+from app.signature_store import SIGNATURES_DIR
 
 router = APIRouter(
     prefix="/observer-sheet",
@@ -43,6 +44,11 @@ def get_observer_sheet(event_id: str, db: Session = Depends(get_db)):
         participant = participants_by_id.get(reg.participant_id)
         if participant is None:
             continue
+        signature_path = None
+        if attendance.sign_out_signature_ref:
+            candidate = SIGNATURES_DIR.parent / attendance.sign_out_signature_ref
+            if candidate.is_file():
+                signature_path = str(candidate)
         rows.append(
             {
                 "name": participant.name,
@@ -50,6 +56,8 @@ def get_observer_sheet(event_id: str, db: Session = Depends(get_db)):
                 "participant_type": participant.participant_type,
                 "sign_in_time": _format_time(attendance.sign_in_time),
                 "sign_out_time": _format_time(attendance.sign_out_time),
+                "signature_path": signature_path,
+                "cme_credits": float(event.cme_credits) if event.cme_credits else None,
             }
         )
     rows.sort(key=lambda r: r["name"])

@@ -11,7 +11,7 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import cm
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 HEADER_COLOR = colors.HexColor("#6D28D9")
 ROW_ALT_COLOR = colors.HexColor("#F3E8FF")
@@ -32,18 +32,30 @@ def render_observer_sheet_pdf(event: dict, rows: list[dict]) -> bytes:
         Spacer(1, 0.5 * cm),
     ]
 
-    table_data = [["#", "Name", "Designation", "Type", "Sign-in", "Sign-out"]]
+    has_credits = bool(event.get("cme_credits"))
+
+    header = ["#", "Name", "Designation", "Type", "Sign-in", "Sign-out", "Signature"]
+    if has_credits:
+        header.append("CME Credits")
+    table_data = [header]
     for i, row in enumerate(rows, start=1):
-        table_data.append(
-            [
-                str(i),
-                row["name"],
-                row["designation"],
-                row["participant_type"],
-                row["sign_in_time"],
-                row["sign_out_time"],
-            ]
+        signature = (
+            Image(row["signature_path"], width=2.5 * cm, height=1.2 * cm)
+            if row.get("signature_path")
+            else "-"
         )
+        table_row = [
+            str(i),
+            row["name"],
+            row["designation"],
+            row["participant_type"],
+            row["sign_in_time"],
+            row["sign_out_time"],
+            signature,
+        ]
+        if has_credits:
+            table_row.append(str(row["cme_credits"]))
+        table_data.append(table_row)
 
     table = Table(table_data, repeatRows=1)
     style = [
