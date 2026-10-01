@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import os
 import secrets
 from contextlib import asynccontextmanager
@@ -46,64 +45,11 @@ app.add_middleware(
 
 for r in (auth, users, events, participants, registrations, attendance, certificates, imports, reports):
     app.include_router(r.router)
-=======
-from contextlib import asynccontextmanager
-
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
-from app.database import SessionLocal
-from app.routers import (
-    attendance,
-    auth,
-    certificates,
-    events,
-    imports,
-    observer_sheet,
-    participants,
-    registrations,
-    reports,
-)
-from app.seed import seed_users
-
-
-@asynccontextmanager
-async def lifespan(_: FastAPI):
-    db = SessionLocal()
-    try:
-        seed_users(db)
-    finally:
-        db.close()
-    yield
-
-
-app = FastAPI(title="CME Registration System API", lifespan=lifespan)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origin_regex=r"http://(localhost|127\.0\.0\.1|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):5173",
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-app.include_router(auth.router)
-app.include_router(participants.router)
-app.include_router(events.router)
-app.include_router(registrations.router)
-app.include_router(attendance.router)
-app.include_router(certificates.router)
-app.include_router(imports.router)
-app.include_router(reports.router)
-app.include_router(observer_sheet.router)
->>>>>>> f6417903ef485a178711941303c1c7bbbf4c6de5
 
 
 @app.get("/health")
 def health():
     return {"status": "ok"}
-<<<<<<< HEAD
 
 
 @app.get("/live")
@@ -117,5 +63,3 @@ def live_updates(token: str = Query(...)):
         live.stream(), media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
-=======
->>>>>>> f6417903ef485a178711941303c1c7bbbf4c6de5

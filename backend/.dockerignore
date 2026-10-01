@@ -1,16 +1,6 @@
-<<<<<<< HEAD
 venv/
 __pycache__/
 **/__pycache__/
 data/
 .env
 *.pyc
-=======
-venv
-__pycache__
-**/__pycache__
-*.pyc
-data
-.env
-.pytest_cache
->>>>>>> f6417903ef485a178711941303c1c7bbbf4c6de5
