@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 services:
   postgres:
     image: postgres:16-alpine
@@ -9,6 +10,23 @@ services:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+=======
+# Full stack: Postgres + Redis + backend (FastAPI) + frontend (React, served by nginx).
+# `docker compose up --build` starts everything; see README.md for details.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cme
+      POSTGRES_PASSWORD: cme_dev_password
+      POSTGRES_DB: cme_registration
+    ports:
+      - "5432:5432"
+    volumes:
+      - cme_postgres_data:/var/lib/postgresql/data
+>>>>>>> f6417903ef485a178711941303c1c7bbbf4c6de5
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U cme -d cme_registration"]
       interval: 5s
@@ -17,8 +35,12 @@ services:
 
   redis:
     image: redis:7-alpine
+<<<<<<< HEAD
     volumes:
       - redis_data:/data
+=======
+    restart: unless-stopped
+>>>>>>> f6417903ef485a178711941303c1c7bbbf4c6de5
     ports:
       - "6379:6379"
     healthcheck:
@@ -29,6 +51,7 @@ services:
 
   backend:
     build: ./backend
+<<<<<<< HEAD
     environment:
       DATABASE_URL: postgresql+psycopg://cme:cme_dev_password@postgres:5432/cme_registration
       REDIS_URL: redis://redis:6379/0
@@ -38,6 +61,17 @@ services:
       - "8000:8000"
     volumes:
       - backend_data:/app/data
+=======
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+psycopg2://cme:cme_dev_password@postgres:5432/cme_registration
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
+    ports:
+      - "8000:8000"
+    volumes:
+      - cme_signatures_data:/app/backend/data
+>>>>>>> f6417903ef485a178711941303c1c7bbbf4c6de5
     depends_on:
       postgres:
         condition: service_healthy
@@ -46,12 +80,23 @@ services:
 
   frontend:
     build: ./frontend
+<<<<<<< HEAD
     ports:
       - "5173:5173"
+=======
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+>>>>>>> f6417903ef485a178711941303c1c7bbbf4c6de5
     depends_on:
       - backend
 
 volumes:
+<<<<<<< HEAD
   postgres_data:
   redis_data:
   backend_data:
+=======
+  cme_postgres_data:
+  cme_signatures_data:
+>>>>>>> f6417903ef485a178711941303c1c7bbbf4c6de5

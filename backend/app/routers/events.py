@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+<<<<<<< HEAD
 from sqlalchemy import exists, func, select
 from sqlalchemy.orm import Session
 
@@ -77,4 +78,68 @@ def close_event(event_id: str, db: Session = Depends(get_db)):
     event.status = "closed"
     db.commit()
     notify("events", event.event_id)
+=======
+from sqlalchemy.orm import Session
+
+from app import models
+from app.auth import get_current_user, require_admin
+from app.database import get_db
+from app.db_utils import row_to_dict
+from app.schemas import Event, EventCreate, EventUpdate
+
+router = APIRouter(
+    prefix="/events", tags=["events"], dependencies=[Depends(get_current_user)]
+)
+
+
+@router.post("", response_model=Event, status_code=201, dependencies=[Depends(require_admin)])
+def create_event(payload: EventCreate, db: Session = Depends(get_db)):
+    event = models.Event(**payload.model_dump())
+    db.add(event)
+    db.flush()
+    db.add(models.EventCertificateCounter(event_id=event.event_id, last_no=0))
+    db.commit()
+    db.refresh(event)
+    return row_to_dict(event)
+
+
+@router.get("", response_model=list[Event])
+def list_events(db: Session = Depends(get_db)):
+    return [row_to_dict(e) for e in db.query(models.Event).all()]
+
+
+@router.get("/{event_id}", response_model=Event)
+def get_event(event_id: str, db: Session = Depends(get_db)):
+    event = db.query(models.Event).filter_by(event_id=event_id).first()
+    if event is None:
+        raise HTTPException(status_code=404, detail="Event not found")
+    return row_to_dict(event)
+
+
+@router.patch(
+    "/{event_id}", response_model=Event, dependencies=[Depends(require_admin)]
+)
+def update_event(event_id: str, payload: EventUpdate, db: Session = Depends(get_db)):
+    event = db.query(models.Event).filter_by(event_id=event_id).first()
+    if event is None:
+        raise HTTPException(status_code=404, detail="Event not found")
+    event.start_time = payload.start_time
+    db.commit()
+    db.refresh(event)
+    return row_to_dict(event)
+
+
+@router.post(
+    "/{event_id}/close", response_model=Event, dependencies=[Depends(require_admin)]
+)
+def close_event(event_id: str, db: Session = Depends(get_db)):
+    event = db.query(models.Event).filter_by(event_id=event_id).first()
+    if event is None:
+        raise HTTPException(status_code=404, detail="Event not found")
+    if event.status == "closed":
+        raise HTTPException(status_code=400, detail="Event is already closed")
+    event.status = "closed"
+    db.commit()
+    db.refresh(event)
+>>>>>>> f6417903ef485a178711941303c1c7bbbf4c6de5
     return row_to_dict(event)

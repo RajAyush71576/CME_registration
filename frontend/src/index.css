@@ -2,6 +2,7 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+<<<<<<< HEAD
 @theme {
   --font-sans: "Figtree Variable", "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji";
@@ -64,3 +65,19 @@
   to { opacity: 1; transform: none; }
 }
 .animate-pop-in { animation: pop-in 180ms ease-out; }
+=======
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+}
+>>>>>>> f6417903ef485a178711941303c1c7bbbf4c6de5
