@@ -43,6 +43,9 @@ export function nowIST() {
 }
 
 export function attendanceStatus(reg, event) {
+  // Faculty-only manual present/absent call stands in for sign-in/out entirely when set.
+  if (reg.manual_status === 'present') return { label: 'Completed', tone: 'green', key: 'completed' }
+  if (reg.manual_status === 'absent') return { label: 'Absent', tone: 'red', key: 'absent' }
   const a = reg.attendance
   if (a?.sign_out_time) return { label: 'Completed', tone: 'green', key: 'completed' }
   if (a) return { label: 'Signed in', tone: 'blue', key: 'signed_in' }
@@ -65,7 +68,9 @@ export const EMAIL_PATTERN = '[A-Za-z0-9._%+\\-]+@[A-Za-z0-9\\-]+(\\.[A-Za-z0-9\
 export const isEmail = (v) => new RegExp(`^${EMAIL_PATTERN}$`).test(String(v ?? '').trim())
 export const EMAIL_HINT = 'Enter a valid email address, like name@gmail.com'
 
-export const SOURCE_LABELS = { website: 'Website', import: 'Import', on_spot: 'On-spot' }
+// "website" and "import" are both Excel-upload paths (CME website export vs. an external-society
+// sheet) — both read as "Excel"; only on-site walk-ins are labeled differently.
+export const SOURCE_LABELS = { website: 'Excel', import: 'Excel', on_spot: 'On-spot' }
 
 // UTC ISO timestamp -> IST calendar day (YYYY-MM-DD), for date filters.
 export const istDay = (iso) => new Date(iso).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })

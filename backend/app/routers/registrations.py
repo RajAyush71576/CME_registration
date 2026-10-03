@@ -4,9 +4,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..live import notify
-from ..db import get_db, row_to_dict
+from ..db import get_db, row_to_dict, utcnow
 from ..models import Attendance, Certificate, Event, Participant, Registration, User
-from ..schemas import RegistrationCreate
+from ..schemas import AttendanceMarkIn, RegistrationCreate
 from ..security import get_current_user
 
 router = APIRouter(prefix="/registrations", tags=["registrations"], dependencies=[Depends(get_current_user)])
@@ -36,6 +36,8 @@ def registration_details(db: Session, *filters) -> list[dict]:
             **row_to_dict(reg),
             "registered_by_name": name(reg.registered_by),
             "registered_by_role": role(reg.registered_by),
+            "manual_status_by_name": name(reg.manual_status_by),
+            "manual_status_by_role": role(reg.manual_status_by),
             "participant": row_to_dict(p),
             "attendance": {
                 **row_to_dict(a),
@@ -110,4 +112,30 @@ def get_registration(registration_id: str, db: Session = Depends(get_db)):
     reg = db.get(Registration, registration_id)
     if not reg:
         raise HTTPException(404, "Registration not found")
+    return row_to_dict(reg)
+
+
+@router.patch("/{registration_id}/attendance-mark")
+def set_attendance_mark(
+    registration_id: str, body: AttendanceMarkIn, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+):
+    """Faculty-only manual present/absent call: a stand-in for sign-in/sign-out, which stays optional
+    for Faculty. Unset (mark=None) leaves attendance to the normal sign-in-derived status, which reads
+    as Absent once the event closes with nothing recorded — so an un-clicked Faculty defaults to Absent."""
+    reg = db.get(Registration, registration_id)
+    if not reg:
+        raise HTTPException(404, "Registration not found")
+    participant = db.get(Participant, reg.participant_id)
+    if participant.participant_type != "Faculty":
+        raise HTTPException(400, "Manual present/absent marking is only available for Faculty")
+    event = db.get(Event, reg.event_id)
+    if event.status == "closed":
+        raise HTTPException(400, "This event is closed")
+    if db.scalar(select(Attendance).where(Attendance.registration_id == registration_id)):
+        raise HTTPException(400, "This participant already signed in — undo that first, or use sign-out as normal")
+    reg.manual_status = body.mark
+    reg.manual_status_by = user.user_id if body.mark else None
+    reg.manual_status_at = utcnow() if body.mark else None
+    db.commit()
+    notify("registrations", reg.event_id)
     return row_to_dict(reg)

@@ -3,7 +3,7 @@ from sqlalchemy import exists, func, select
 from sqlalchemy.orm import Session
 
 from ..live import notify
-from ..db import get_db, row_to_dict
+from ..db import get_db, row_to_dict, utcnow
 from ..models import Attendance, Event, EventCertificateCounter, Participant, Registration
 from ..schemas import EventCreate, EventUpdate
 from ..security import get_current_user, require_admin
@@ -75,6 +75,7 @@ def close_event(event_id: str, db: Session = Depends(get_db)):
     if event.status == "closed":
         raise HTTPException(400, "Event is already closed")
     event.status = "closed"
+    event.closed_at = utcnow()
     db.commit()
     notify("events", event.event_id)
     return row_to_dict(event)

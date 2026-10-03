@@ -165,6 +165,10 @@ class RegistrationCreate(BaseModel):
     event_id: str
 
 
+class AttendanceMarkIn(BaseModel):
+    mark: Literal["present", "absent"] | None  # None clears a previous mark
+
+
 class SignInIn(BaseModel):
     registration_id: str
     device_id: Req(100)

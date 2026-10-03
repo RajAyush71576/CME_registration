@@ -117,6 +117,8 @@ export const api = {
     request('/attendance/sign-in', { method: 'POST', body: { registration_id, device_id, signature } }),
   signOut: (attendanceId, signature) =>
     request(`/attendance/${attendanceId}/sign-out`, { method: 'POST', body: { signature } }),
+  markAttendance: (registrationId, mark) =>
+    request(`/registrations/${registrationId}/attendance-mark`, { method: 'PATCH', body: { mark } }),
 
   issueCertificate: (registration_id) => request('/certificates/issue', { method: 'POST', body: { registration_id } }),
   openCertificate: (certificateId) => openBlobInTab(`/certificates/${certificateId}/pdf`),

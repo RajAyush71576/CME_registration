@@ -111,7 +111,8 @@ def issue(body: CertificateIssue, db: Session = Depends(get_db)):
     if not reg:
         raise HTTPException(404, "Registration not found")
     att = db.scalar(select(Attendance).where(Attendance.registration_id == reg.registration_id))
-    if not att or not att.sign_out_time:
+    eligible = (att and att.sign_out_time) or reg.manual_status == "present"
+    if not eligible:
         raise HTTPException(400, "Not eligible: the participant hasn't signed out yet")
     event = db.get(Event, reg.event_id)
     participant = db.get(Participant, reg.participant_id)

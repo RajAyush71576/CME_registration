@@ -87,6 +87,8 @@ def sign_in(body: SignInIn, db: Session = Depends(get_db), user: User = Depends(
     event = db.get(Event, reg.event_id)
     if event.status == "closed":
         raise HTTPException(400, "This event is closed")
+    if reg.manual_status:
+        raise HTTPException(400, "Already marked manually — undo that first to sign in instead")
     now_ist = datetime.now(IST)
     if now_ist.date() != event.event_date:
         raise HTTPException(400, "Sign-in is only available on the day of the event")

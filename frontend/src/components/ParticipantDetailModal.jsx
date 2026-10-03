@@ -22,6 +22,7 @@ function Notice({ tone = 'gray', children }) {
     blue: 'bg-sky-50 text-sky-800 dark:bg-sky-500/10 dark:text-sky-200',
     green: 'bg-emerald-50 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200',
     amber: 'bg-amber-50 text-amber-800 dark:bg-amber-500/10 dark:text-amber-200',
+    red: 'bg-red-50 text-red-800 dark:bg-red-500/10 dark:text-red-200',
   }
   return <div className={`rounded-lg px-3.5 py-3 text-sm ${tones[tone]}`}>{children}</div>
 }
@@ -44,6 +45,8 @@ export default function ParticipantDetailModal({ reg, event, onClose, onChanged 
   const att = reg.attendance
   const status = attendanceStatus(reg, event)
   const closed = event.status === 'closed'
+  const isFaculty = p.participant_type === 'Faculty'
+  const manualStatus = reg.manual_status
 
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState(p)
@@ -85,6 +88,11 @@ export default function ParticipantDetailModal({ reg, event, onClose, onChanged 
     onChanged()?.catch?.((e) => setError(e.message))
   }
 
+  const markAttendance = (mark) => run(async () => {
+    await api.markAttendance(reg.registration_id, mark)
+    await onChanged()
+  })
+
   const details = [
     ['Designation', p.designation], ['Type', p.participant_type], ['Email', p.email], ['Phone', p.phone],
     ['WhatsApp', p.whatsapp_number], ['Place of work', p.place_of_work], ['Country', p.country || '—'],
@@ -120,7 +128,7 @@ export default function ParticipantDetailModal({ reg, event, onClose, onChanged 
                     </div>
                   ))}
                 </dl>
-                {!att?.sign_out_time && (
+                {status.key !== 'completed' && (
                   <button className="btn-secondary mt-4" onClick={() => { setForm(p); setEditing(true) }}>Edit details</button>
                 )}
               </>
@@ -128,7 +136,16 @@ export default function ParticipantDetailModal({ reg, event, onClose, onChanged 
           </Section>
 
           <Section title="Attendance">
-            {att?.sign_out_time ? (
+            {manualStatus ? (
+              <div className="space-y-3">
+                <Notice tone={manualStatus === 'present' ? 'green' : 'red'}>
+                  Marked {manualStatus === 'present' ? 'present' : 'absent'} by <b>{who(reg.manual_status_by_name, reg.manual_status_by_role)}</b> — a manual call, no sign-in/out was recorded.
+                </Notice>
+                {!closed && (
+                  <button className="btn-secondary" disabled={busy} onClick={() => markAttendance(null)}>Undo, allow sign-in instead</button>
+                )}
+              </div>
+            ) : att?.sign_out_time ? (
               <Notice tone="green">
                 Attendance complete: {fmtDateTime(att.sign_in_time)} – {fmtDateTime(att.sign_out_time)}
                 <span className="mt-1.5 block text-xs">
@@ -152,18 +169,40 @@ export default function ParticipantDetailModal({ reg, event, onClose, onChanged 
                   </button>
                 )}
               </div>
-            ) : signInOpen ? (
-              <button className="btn-primary min-h-14 w-full text-base" onClick={() => setSigning('in')}>Sign in</button>
             ) : (
-              <Notice>
-                {isEventDay
-                  ? `Sign-in opens at ${fmtTime(event.start_time)} today.`
-                  : 'Sign-in is only available on the day of the event.'}
-              </Notice>
+              <div className="space-y-3">
+                {signInOpen ? (
+                  <button className="btn-primary min-h-14 w-full text-base" onClick={() => setSigning('in')}>Sign in</button>
+                ) : (
+                  <Notice>
+                    {isEventDay
+                      ? `Sign-in opens at ${fmtTime(event.start_time)} today.`
+                      : 'Sign-in is only available on the day of the event.'}
+                  </Notice>
+                )}
+                {isFaculty && (
+                  <>
+                    <div className="flex items-center gap-3 text-xs font-semibold tracking-wide text-gray-400 uppercase dark:text-gray-500">
+                      <div className="h-px flex-1 bg-gray-200 dark:bg-white/10" />or mark directly<div className="h-px flex-1 bg-gray-200 dark:bg-white/10" />
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Sign-in/out is optional for Faculty — mark present or absent instead. Left unmarked, Faculty show as Absent once the event closes.
+                    </p>
+                    <div className="flex gap-2">
+                      <button className="btn min-h-12 flex-1 bg-emerald-600 text-white hover:bg-emerald-700" disabled={busy} onClick={() => markAttendance('present')}>
+                        Mark present
+                      </button>
+                      <button className="btn min-h-12 flex-1 bg-red-600 text-white hover:bg-red-700" disabled={busy} onClick={() => markAttendance('absent')}>
+                        Mark absent
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             )}
           </Section>
 
-          {isAdmin && att?.sign_out_time && (
+          {isAdmin && status.key === 'completed' && (
             <Section title="Certificate">
               {reg.certificate ? (
                 <button className="btn-primary" disabled={busy} onClick={() => run(() => api.openCertificate(reg.certificate.certificate_id))}>

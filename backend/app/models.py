@@ -70,6 +70,8 @@ class Event(Base):
     status: Mapped[str] = mapped_column(String(20), default="active", server_default="active")
     # NULL for events created before this column existed (their creation time was never recorded).
     created_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=utcnow)
+    # NULL until the event is closed; set once, when status flips to "closed".
+    closed_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
 
 
 class EventCertificateCounter(Base):
@@ -87,6 +89,11 @@ class Registration(Base):
     source: Mapped[str] = mapped_column(String(20))
     registered_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
     registered_by: Mapped[str | None] = mapped_column(ForeignKey("users.user_id"))
+    # Faculty-only: a manual present/absent call that bypasses sign-in/sign-out entirely.
+    # NULL (the default) means "not called" — falls back to the normal sign-in-derived status.
+    manual_status: Mapped[str | None] = mapped_column(String(10))  # present | absent
+    manual_status_by: Mapped[str | None] = mapped_column(ForeignKey("users.user_id"))
+    manual_status_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
 
 
 class Attendance(Base):

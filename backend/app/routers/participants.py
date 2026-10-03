@@ -41,13 +41,16 @@ def list_participants(db: Session = Depends(get_db)):
     """Every participant, each with the events they're registered for and how their attendance stands there."""
     events: dict[str, list[dict]] = {}
     rows = db.execute(
-        select(Registration.participant_id, Event, Attendance)
+        select(Registration.participant_id, Registration.manual_status, Event, Attendance)
         .join(Event, Event.event_id == Registration.event_id)
         .outerjoin(Attendance, Attendance.registration_id == Registration.registration_id)
         .order_by(Event.event_date, Event.event_name)
     )
-    for pid, ev, att in rows:
-        attendance = ("completed" if att.sign_out_time else "signed_in") if att else ("absent" if ev.status == "closed" else "not_signed_in")
+    for pid, manual_status, ev, att in rows:
+        if manual_status:
+            attendance = "completed" if manual_status == "present" else "absent"
+        else:
+            attendance = ("completed" if att.sign_out_time else "signed_in") if att else ("absent" if ev.status == "closed" else "not_signed_in")
         events.setdefault(pid, []).append({
             "event_id": ev.event_id, "event_name": ev.event_name, "event_date": ev.event_date,
             "event_status": ev.status, "attendance": attendance,
