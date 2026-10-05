@@ -139,14 +139,14 @@ def attendance_report(event_id: str | None = None, db: Session = Depends(get_db)
     sig_in_col, sig_out_col = n_cols - 1, n_cols
     type_col = REPORT_COLUMNS.index("Participant Type")
 
-    # Faculty and delegates go on separate sheets; participant_type is only ever one of these two.
-    rows_by_type: dict[str, list] = {"Faculty": [], "Delegate": []}
+    # Faculty, delegates, and sponsors go on separate sheets; participant_type is only ever one of these three.
+    rows_by_type: dict[str, list] = {"Faculty": [], "Delegate": [], "Sponsor": []}
     for values, sig_in_ref, sig_out_ref in report_rows(db, event_id):
         rows_by_type.setdefault(values[type_col], []).append((values, sig_in_ref, sig_out_ref))
 
     wb = Workbook()
     wb.remove(wb.active)
-    for sheet_name, type_key in (("Faculty", "Faculty"), ("Delegates", "Delegate")):
+    for sheet_name, type_key in (("Faculty", "Faculty"), ("Delegates", "Delegate"), ("Sponsors", "Sponsor")):
         ws = wb.create_sheet(sheet_name)
         if event:
             write_event_header(ws, event, n_cols)

@@ -10,7 +10,7 @@ import ParticipantDetailModal from '../components/ParticipantDetailModal'
 import { useAutoRefresh, useLiveUpdates } from '../components/Refresh'
 import CreateEventModal from '../components/CreateEventModal'
 import { useAuth } from '../contexts/AuthContext'
-import { attendanceStatus, byAttendanceThenName, credits, fmtClock, fmtDate, fmtDuration, fmtTime, num, ROLE_LABELS, SOURCE_LABELS } from '../utils'
+import { attendanceStatus, byAttendanceThenName, credits, fmtClock, fmtDate, fmtDuration, fmtTime, num, PARTICIPANT_TYPES, ROLE_LABELS, SOURCE_LABELS } from '../utils'
 
 // Columns that only fit on wide screens; portrait tablets get the rest without sideways scrolling.
 const WIDE_ONLY = ['Source', 'Signatures taken by']
@@ -54,6 +54,7 @@ export default function EventDetail() {
   const [error, setError] = useState('')
   const [name, setName] = useState('')
   const [designation, setDesignation] = useState('')
+  const [type, setType] = useState('')
   const [status, setStatus] = useState('')
   const [staffFilter, setStaffFilter] = useState('')
   const [openId, setOpenId] = useState(null)
@@ -83,14 +84,15 @@ export default function EventDetail() {
     return regs
       .filter(({ participant: p }) => !term || [p.name, p.phone, p.whatsapp_number, p.email].some((v) => v?.toLowerCase().includes(term)))
       .filter((r) => !designation || r.participant.designation === designation)
+      .filter((r) => !type || r.participant.participant_type === type)
       // 'absent' is just 'not signed in' once the event is closed.
       .filter((r) => !status || attendanceStatus(r, event).key.replace('absent', 'not_signed_in') === status)
       .filter((r) => !staffFilter ||
         [r.registered_by_name, r.attendance?.signed_in_by_name, r.attendance?.signed_out_by_name].includes(staffFilter))
       .sort(byAttendanceThenName(event))
-  }, [regs, name, designation, status, staffFilter, event])
+  }, [regs, name, designation, type, status, staffFilter, event])
 
-  const hasFilters = name || designation || status || staffFilter
+  const hasFilters = name || designation || type || status || staffFilter
 
   if (error && !event) return <ErrorNote>{error}</ErrorNote>
   if (!event) return <p className="py-10 text-center text-gray-500 dark:text-gray-400">Loading event…</p>
@@ -180,25 +182,29 @@ export default function EventDetail() {
         </div>
 
         {regs.length > 0 && (
-          <div className="flex flex-wrap gap-3 border-b border-gray-100 p-4 dark:border-white/10">
-            <input className="input w-full sm:w-56" type="search" placeholder="Search name, phone or email" value={name} onChange={(e) => setName(e.target.value)} aria-label="Search by name, phone or email" />
-            <select className="input w-full sm:w-52" value={designation} onChange={(e) => setDesignation(e.target.value)} aria-label="Filter by designation">
+          <div className="grid grid-cols-1 gap-3 border-b border-gray-100 p-4 sm:grid-cols-2 lg:grid-cols-[minmax(11rem,1fr)_auto_auto_auto_auto_auto] dark:border-white/10">
+            <input className="input" type="search" placeholder="Search name, phone or email" value={name} onChange={(e) => setName(e.target.value)} aria-label="Search by name, phone or email" />
+            <select className="input" value={designation} onChange={(e) => setDesignation(e.target.value)} aria-label="Filter by designation">
               <option value="">All designations</option>
               {designations.map((d) => <option key={d} value={d}>{d}</option>)}
             </select>
-            <select className="input w-full sm:w-44" value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Filter by attendance">
-              <option value="">Any attendance status</option>
+            <select className="input" value={type} onChange={(e) => setType(e.target.value)} aria-label="Filter by participant type">
+              <option value="">All types</option>
+              {PARTICIPANT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <select className="input" value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Filter by attendance">
+              <option value="">Any status</option>
               <option value="not_signed_in">{closed ? 'Absent' : 'Not signed in'}</option>
               <option value="signed_in">Signed in</option>
               <option value="completed">Completed</option>
             </select>
             {staffNames.length > 0 && (
-              <select className="input w-full sm:w-52" value={staffFilter} onChange={(e) => setStaffFilter(e.target.value)} aria-label="Filter by staff">
-                <option value="">Taken by anyone</option>
+              <select className="input" value={staffFilter} onChange={(e) => setStaffFilter(e.target.value)} aria-label="Filter by staff">
+                <option value="">Any staff</option>
                 {staffNames.map((n) => <option key={n} value={n}>Taken by {n}</option>)}
               </select>
             )}
-            <button className="btn-secondary w-full sm:w-auto" onClick={() => { setName(''); setDesignation(''); setStatus(''); setStaffFilter('') }} disabled={!hasFilters}>Clear</button>
+            <button className="btn-secondary" onClick={() => { setName(''); setDesignation(''); setType(''); setStatus(''); setStaffFilter('') }} disabled={!hasFilters}>Clear</button>
           </div>
         )}
 

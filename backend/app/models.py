@@ -51,7 +51,7 @@ class Participant(Base):
     place_of_work: Mapped[str] = mapped_column(String(255))
     country: Mapped[str | None] = mapped_column(String(100))
     medical_license_no: Mapped[str | None] = mapped_column(String(100))
-    participant_type: Mapped[str] = mapped_column(String(20))  # Faculty | Delegate
+    participant_type: Mapped[str] = mapped_column(String(20))  # Faculty | Delegate | Sponsor
     source: Mapped[str] = mapped_column(String(20))  # website | import | on_spot
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
 

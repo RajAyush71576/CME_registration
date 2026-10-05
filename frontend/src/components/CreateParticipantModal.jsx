@@ -120,6 +120,7 @@ export function ParticipantFields({ form, setForm, licenseRequired }) {
         <select className="input" value={form.participant_type} onChange={set('participant_type')}>
           <option value="Delegate">Delegate</option>
           <option value="Faculty">Faculty</option>
+          <option value="Sponsor">Sponsor</option>
         </select>
       </Field>
     </div>

@@ -72,6 +72,8 @@ export const EMAIL_HINT = 'Enter a valid email address, like name@gmail.com'
 // sheet) — both read as "Excel"; only on-site walk-ins are labeled differently.
 export const SOURCE_LABELS = { website: 'Excel', import: 'Excel', on_spot: 'On-spot' }
 
+export const PARTICIPANT_TYPES = ['Faculty', 'Delegate', 'Sponsor']
+
 // UTC ISO timestamp -> IST calendar day (YYYY-MM-DD), for date filters.
 export const istDay = (iso) => new Date(iso).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })
 

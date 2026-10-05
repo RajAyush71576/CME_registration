@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { api } from '../api'
 import CreateParticipantModal from '../components/CreateParticipantModal'
 import { ErrorNote } from '../components/Modal'
-import { SOURCE_LABELS, fmtDate, istDay } from '../utils'
+import { PARTICIPANT_TYPES, SOURCE_LABELS, fmtDate, istDay } from '../utils'
 
 // Chip colour = how this person's attendance stands at that event.
 const ATTENDANCE = {
@@ -39,6 +39,7 @@ export default function Participants() {
   const [list, setList] = useState(null)
   const [name, setName] = useState('')
   const [designation, setDesignation] = useState('')
+  const [type, setType] = useState('')
   const [date, setDate] = useState('')
   const [eventId, setEventId] = useState('')
   const [error, setError] = useState('')
@@ -59,11 +60,12 @@ export default function Participants() {
     return (list || [])
       .filter((p) => !term || [p.name, p.phone, p.whatsapp_number, p.email].some((v) => v?.toLowerCase().includes(term)))
       .filter((p) => !designation || p.designation === designation)
+      .filter((p) => !type || p.participant_type === type)
       .filter((p) => !date || istDay(p.created_at) === date)
       .filter((p) => !eventId || (eventId === 'none' ? !p.events.length : p.events.some((e) => e.event_id === eventId)))
-  }, [list, name, designation, date, eventId])
+  }, [list, name, designation, type, date, eventId])
 
-  const hasFilters = name || designation || date || eventId
+  const hasFilters = name || designation || type || date || eventId
 
   return (
     <div className="space-y-5">
@@ -71,11 +73,15 @@ export default function Participants() {
         <h1 className="text-2xl font-bold tracking-tight">Participants {list && <span className="text-gray-500 dark:text-gray-400">({filtered.length})</span>}</h1>
         <button className="btn-primary" onClick={() => setCreating(true)}>+ New participant</button>
       </div>
-      <div className="card grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 sm:p-4 lg:grid-cols-[minmax(12rem,1fr)_auto_minmax(0,16rem)_auto_auto]">
+      <div className="card grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 sm:p-4 lg:grid-cols-[minmax(12rem,1fr)_auto_auto_minmax(0,16rem)_auto_auto]">
         <input className="input" type="search" placeholder="Search name, phone or email" value={name} onChange={(e) => setName(e.target.value)} aria-label="Search by name, phone or email" />
         <select className="input" value={designation} onChange={(e) => setDesignation(e.target.value)} aria-label="Filter by designation">
           <option value="">All designations</option>
           {designations.map((d) => <option key={d} value={d}>{d}</option>)}
+        </select>
+        <select className="input" value={type} onChange={(e) => setType(e.target.value)} aria-label="Filter by participant type">
+          <option value="">All types</option>
+          {PARTICIPANT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
         <select className="input" value={eventId} onChange={(e) => setEventId(e.target.value)} aria-label="Filter by event">
           <option value="">All events</option>
@@ -83,7 +89,7 @@ export default function Participants() {
           <option value="none">Not registered for any event</option>
         </select>
         <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label="Filter by date added" />
-        <button className="btn-secondary" onClick={() => { setName(''); setDesignation(''); setDate(''); setEventId('') }} disabled={!hasFilters}>Clear</button>
+        <button className="btn-secondary" onClick={() => { setName(''); setDesignation(''); setType(''); setDate(''); setEventId('') }} disabled={!hasFilters}>Clear</button>
       </div>
       <ErrorNote>{error}</ErrorNote>
       <p className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-gray-500 dark:text-gray-400">

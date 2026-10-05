@@ -24,7 +24,7 @@ function describe(err) {
     return { field: f, text: `${LABELS[f] || err.slice(8)} is missing` }
   }
   if (err.endsWith(' is missing')) return { field: fieldOf(err), text: err }
-  if (/^(participant_type|participant type|type) must/i.test(err)) return { field: 'participant_type', text: 'Type must be Faculty or Delegate' }
+  if (/^(participant_type|participant type|type) must/i.test(err)) return { field: 'participant_type', text: 'Type must be Faculty, Delegate, or Sponsor' }
   if (/too long/i.test(err)) return { field: fieldOf(err), text: err }
   if (err.includes('license')) return { field: 'medical_license_no', text: 'License no. is required because this event gives CME credits' }
   if (err === EMAIL_HINT) return { field: 'email', text: 'Email address is not valid (it should look like name@gmail.com)' }
@@ -42,8 +42,8 @@ function validate(rows, originals, needsLicense) {
   return rows.map((row) => {
     const errors = REQUIRED.filter((f) => !String(row[f] ?? '').trim()).map((f) => `Missing ${f}`)
     const type = String(row.participant_type ?? '').trim()
-    if (type && !['Faculty', 'Delegate'].includes(type.charAt(0).toUpperCase() + type.slice(1).toLowerCase())) {
-      errors.push('participant_type must be Faculty or Delegate')
+    if (type && !['Faculty', 'Delegate', 'Sponsor'].includes(type.charAt(0).toUpperCase() + type.slice(1).toLowerCase())) {
+      errors.push('participant_type must be Faculty, Delegate, or Sponsor')
     }
     if (needsLicense && !String(row.medical_license_no ?? '').trim()) {
       errors.push('Medical license number is required for CME-credit events')

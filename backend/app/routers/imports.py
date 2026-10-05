@@ -90,8 +90,8 @@ def validate_rows(db: Session, event: Event, rows: list[dict]) -> list[dict]:
                 errors.append(f"{LABELS[f]}: {PHONE_ERROR}")
         if row["participant_type"]:
             row["participant_type"] = row["participant_type"].title()
-            if row["participant_type"] not in ("Faculty", "Delegate"):
-                errors.append("Participant Type must be Faculty or Delegate")
+            if row["participant_type"] not in ("Faculty", "Delegate", "Sponsor"):
+                errors.append("Participant Type must be Faculty, Delegate, or Sponsor")
         if event.cme_credits > 0 and not row["medical_license_no"]:
             errors.append(LICENSE_REQUIRED)
         email = row["email"].lower()

@@ -19,7 +19,7 @@ def Opt(max_length: int):
     return Annotated[str, StringConstraints(strip_whitespace=True, max_length=max_length)]
 
 
-ParticipantType = Literal["Faculty", "Delegate"]
+ParticipantType = Literal["Faculty", "Delegate", "Sponsor"]
 
 # name@domain.tld — needs an @, a domain and a dot-extension of 2+ letters (rejects "abc@gmail", "abcgmail.com", "a@com").
 EMAIL_RE = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$")
