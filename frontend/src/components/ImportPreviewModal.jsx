@@ -3,15 +3,15 @@ import Modal, { ErrorNote } from './Modal'
 import { EMAIL_HINT, isEmail, plural } from '../utils'
 
 const COLUMNS = [
-  ['name', 'Name'], ['designation', 'Designation'], ['email', 'Email'], ['phone', 'Phone'],
-  ['whatsapp_number', 'WhatsApp'], ['place_of_work', 'Place of work'], ['country', 'Country'],
+  ['name', 'Name'], ['designation', 'Designation'], ['speciality', 'Speciality'], ['email', 'Email'], ['phone', 'Contact No.'],
+  ['whatsapp_number', 'WhatsApp'], ['place_of_work', 'Institution/Hospital'], ['country', 'Country'],
   ['medical_license_no', 'License no.'], ['participant_type', 'Type'],
 ]
 const LABELS = Object.fromEntries(COLUMNS)
 // Same limits as the database columns.
 const MAX_LENGTH = {
   name: 200, designation: 200, email: 255, phone: 50, whatsapp_number: 50, place_of_work: 255,
-  country: 100, medical_license_no: 100, participant_type: 20,
+  country: 100, medical_license_no: 100, participant_type: 20, speciality: 200,
 }
 // Field from either a code ("whatsapp_number") or a label the server uses ("WhatsApp number").
 const fieldOf = (s) =>
@@ -24,7 +24,6 @@ function describe(err) {
     return { field: f, text: `${LABELS[f] || err.slice(8)} is missing` }
   }
   if (err.endsWith(' is missing')) return { field: fieldOf(err), text: err }
-  if (/^(participant_type|participant type|type) must/i.test(err)) return { field: 'participant_type', text: 'Type must be Faculty, Delegate, or Sponsor' }
   if (/too long/i.test(err)) return { field: fieldOf(err), text: err }
   if (err.includes('license')) return { field: 'medical_license_no', text: 'License no. is required because this event gives CME credits' }
   if (err === EMAIL_HINT) return { field: 'email', text: 'Email address is not valid (it should look like name@gmail.com)' }
@@ -33,7 +32,7 @@ function describe(err) {
   return { field: null, text: err }
 }
 
-const REQUIRED = ['name', 'designation', 'email', 'phone', 'whatsapp_number', 'place_of_work', 'participant_type']
+const REQUIRED = ['name', 'designation', 'email', 'phone', 'place_of_work', 'participant_type']
 
 // Mirrors the server's checks so errors update as rows are edited.
 // "Already registered" can only come from the server, so it's kept until the email changes.
@@ -41,10 +40,6 @@ function validate(rows, originals, needsLicense) {
   const seen = new Set()
   return rows.map((row) => {
     const errors = REQUIRED.filter((f) => !String(row[f] ?? '').trim()).map((f) => `Missing ${f}`)
-    const type = String(row.participant_type ?? '').trim()
-    if (type && !['Faculty', 'Delegate', 'Sponsor'].includes(type.charAt(0).toUpperCase() + type.slice(1).toLowerCase())) {
-      errors.push('participant_type must be Faculty, Delegate, or Sponsor')
-    }
     if (needsLicense && !String(row.medical_license_no ?? '').trim()) {
       errors.push('Medical license number is required for CME-credit events')
     }

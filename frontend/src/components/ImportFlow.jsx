@@ -12,13 +12,16 @@ export function useImportFlow(onImported) {
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  // Applied to any row whose own Participant Type is blank — handy when a whole sheet is one type
+  // (e.g. a society's "Faculty list" with no such column at all).
+  const [defaultType, setDefaultType] = useState('')
 
   const start = async (event, file) => {
     setError('')
     setResult(null)
     setBusy(true)
     try {
-      const { rows } = await api.importPreview(event.event_id, file, SOURCE_TYPE)
+      const { rows } = await api.importPreview(event.event_id, file, SOURCE_TYPE, defaultType.trim())
       if (!rows.length) setError(`${file.name} has no participant rows below the header.`)
       else setPreview({ fileName: file.name, rows, event })
     } catch (err) {
@@ -33,6 +36,7 @@ export function useImportFlow(onImported) {
     const res = await api.importCommit({
       event_id: event.event_id, source_type: SOURCE_TYPE, rows,
       source_file: retry ? `${fileName} (corrections)` : fileName,
+      default_participant_type: defaultType.trim() || null,
     })
     // Keep the rows that didn't go in, with their reasons, so they can be fixed and pushed again.
     const reasons = Object.fromEntries(res.errors.map((e) => [e.row_number, e.error_message.split('; ')]))
@@ -81,7 +85,7 @@ export function useImportFlow(onImported) {
     />
   )
 
-  return { start, busy, error, setError, reviewing: !!preview, resultCard, modal }
+  return { start, busy, error, setError, reviewing: !!preview, resultCard, modal, defaultType, setDefaultType }
 }
 
 export const XLSX_ACCEPT = '.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'

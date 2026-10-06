@@ -11,7 +11,7 @@ from .imports import LABELS
 
 router = APIRouter(prefix="/participants", tags=["participants"], dependencies=[Depends(get_current_user)])
 
-REQUIRED = {"name", "designation", "email", "phone", "whatsapp_number", "place_of_work", "participant_type"}
+REQUIRED = {"name", "designation", "email", "phone", "place_of_work", "participant_type"}
 
 
 def get_participant_or_404(db: Session, participant_id: str) -> Participant:
@@ -50,7 +50,7 @@ def list_participants(db: Session = Depends(get_db)):
         if manual_status:
             attendance = "completed" if manual_status == "present" else "absent"
         else:
-            attendance = ("completed" if att.sign_out_time else "signed_in") if att else ("absent" if ev.status == "closed" else "not_signed_in")
+            attendance = ("completed" if (att.sign_out_time or not ev.require_sign_out) else "signed_in") if att else ("absent" if ev.status == "closed" else "not_signed_in")
         events.setdefault(pid, []).append({
             "event_id": ev.event_id, "event_name": ev.event_name, "event_date": ev.event_date,
             "event_status": ev.status, "attendance": attendance,
@@ -59,6 +59,14 @@ def list_participants(db: Session = Depends(get_db)):
         {**row_to_dict(p), "events": events.get(p.participant_id, [])}
         for p in db.scalars(select(Participant).order_by(Participant.name))
     ]
+
+
+@router.get("/types")
+def list_participant_types(db: Session = Depends(get_db)):
+    """Distinct participant types already in use, so the registration form can suggest previously
+    typed custom types (e.g. "Organizing Team") alongside the built-in defaults — open to any
+    signed-in user, since staff register participants on-spot too, not just admins."""
+    return sorted({t for t in db.scalars(select(Participant.participant_type).distinct()) if t})
 
 
 @router.get("/{participant_id}", dependencies=[Depends(require_admin)])

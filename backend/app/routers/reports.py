@@ -31,6 +31,22 @@ STATUS_LABELS = {"PRESENT": "Completed", "SIGNED IN": "Signed in", "ABSENT": "Ab
 # a reformatted external-society sheet — so both read as "Excel" here; only on-site walk-ins differ.
 SOURCE_LABELS = {"website": "Excel", "import": "Excel", "on_spot": "On-spot"}
 TIME_FMT = "%Y-%m-%d %I:%M %p"
+# These three sort first (in this order) since they're the long-standing defaults; any other
+# type participants were given (e.g. "Organizing Team") gets its own sheet too, sorted after.
+PRIORITY_TYPES = ["Faculty", "Delegate", "Sponsor"]
+SHEET_NAME_OVERRIDES = {"Faculty": "Faculty", "Delegate": "Delegates", "Sponsor": "Sponsors"}
+INVALID_SHEET_CHARS = set(":\\/?*[]")
+
+
+def sheet_name_for(type_key: str, used: set[str]) -> str:
+    name = SHEET_NAME_OVERRIDES.get(type_key, type_key)
+    name = "".join(c for c in name if c not in INVALID_SHEET_CHARS).strip()[:31] or "Other"
+    base, n = name, 2
+    while name in used:  # two distinct type values could sanitise/truncate to the same name
+        name = f"{base[:28]}~{n}"
+        n += 1
+    used.add(name)
+    return name
 
 
 def signature_path(ref):
@@ -88,7 +104,7 @@ def attendance_status(event: Event, att: Attendance | None, reg: Registration) -
         return "PRESENT"
     if reg.manual_status == "absent":
         return "ABSENT"
-    if att and att.sign_out_time:
+    if att and (att.sign_out_time or not event.require_sign_out):
         return "PRESENT"
     if att:
         return "SIGNED IN"
@@ -139,14 +155,23 @@ def attendance_report(event_id: str | None = None, db: Session = Depends(get_db)
     sig_in_col, sig_out_col = n_cols - 1, n_cols
     type_col = REPORT_COLUMNS.index("Participant Type")
 
-    # Faculty, delegates, and sponsors go on separate sheets; participant_type is only ever one of these three.
-    rows_by_type: dict[str, list] = {"Faculty": [], "Delegate": [], "Sponsor": []}
+    # Each distinct participant type gets its own sheet — not just the three built-in defaults,
+    # since staff can register participants under custom types (e.g. "Organizing Team").
+    rows_by_type: dict[str, list] = {}
     for values, sig_in_ref, sig_out_ref in report_rows(db, event_id):
         rows_by_type.setdefault(values[type_col], []).append((values, sig_in_ref, sig_out_ref))
+    ordered_types = [t for t in PRIORITY_TYPES if t in rows_by_type] + sorted(
+        t for t in rows_by_type if t not in PRIORITY_TYPES
+    )
+    if not ordered_types:
+        ordered_types = ["Participants"]
+        rows_by_type["Participants"] = []
 
     wb = Workbook()
     wb.remove(wb.active)
-    for sheet_name, type_key in (("Faculty", "Faculty"), ("Delegates", "Delegate"), ("Sponsors", "Sponsor")):
+    used_sheet_names: set[str] = set()
+    for type_key in ordered_types:
+        sheet_name = sheet_name_for(type_key, used_sheet_names)
         ws = wb.create_sheet(sheet_name)
         if event:
             write_event_header(ws, event, n_cols)

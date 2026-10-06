@@ -106,6 +106,7 @@ export const api = {
   closeEvent: (id) => request(`/events/${id}/close`, { method: 'POST' }),
 
   participants: () => request('/participants'),
+  participantTypes: () => request('/participants/types'),
   createParticipant: (data) => request('/participants', { method: 'POST', body: data }),
   updateParticipant: (id, data) => request(`/participants/${id}`, { method: 'PATCH', body: data }),
 
@@ -123,11 +124,12 @@ export const api = {
   issueCertificate: (registration_id) => request('/certificates/issue', { method: 'POST', body: { registration_id } }),
   openCertificate: (certificateId) => openBlobInTab(`/certificates/${certificateId}/pdf`),
 
-  importPreview: (eventId, file, sourceType = 'cme_website') => {
+  importPreview: (eventId, file, sourceType = 'cme_website', defaultParticipantType) => {
     const form = new FormData()
     form.append('event_id', eventId)
     form.append('source_type', sourceType)
     form.append('file', file)
+    if (defaultParticipantType) form.append('default_participant_type', defaultParticipantType)
     return request('/import/preview', { method: 'POST', body: form })
   },
   importCommit: (data) => request('/import/commit', { method: 'POST', body: data }),

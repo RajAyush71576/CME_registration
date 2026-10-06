@@ -111,10 +111,10 @@ def issue(body: CertificateIssue, db: Session = Depends(get_db)):
     if not reg:
         raise HTTPException(404, "Registration not found")
     att = db.scalar(select(Attendance).where(Attendance.registration_id == reg.registration_id))
-    eligible = (att and att.sign_out_time) or reg.manual_status == "present"
+    event = db.get(Event, reg.event_id)
+    eligible = (att and (att.sign_out_time or not event.require_sign_out)) or reg.manual_status == "present"
     if not eligible:
         raise HTTPException(400, "Not eligible: the participant hasn't signed out yet")
-    event = db.get(Event, reg.event_id)
     participant = db.get(Participant, reg.participant_id)
     if event.cme_credits > 0 and not participant.medical_license_no:
         raise HTTPException(400, "Not eligible: medical license number is required for CME-credit events")

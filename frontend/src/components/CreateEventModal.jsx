@@ -13,7 +13,7 @@ const MAX_HOURS = 72
 
 const EMPTY = {
   event_name: '', event_date: '', start_time: '09:00', venue: '', department: '',
-  duration_h: '', duration_m: '', doctors: ['', '', ''], cme_credits: '0',
+  duration_h: '', duration_m: '', doctors: ['', '', ''], cme_credits: '0', require_sign_out: true,
 }
 
 // Form values for an existing event (edit mode).
@@ -23,7 +23,7 @@ function fromEvent(ev) {
   return {
     event_name: ev.event_name, event_date: ev.event_date, start_time: ev.start_time.slice(0, 5), venue: ev.venue,
     department: ev.department, duration_h: String(Math.floor(minutes / 60)), duration_m: String(minutes % 60),
-    doctors, cme_credits: String(Number(ev.cme_credits)),
+    doctors, cme_credits: String(Number(ev.cme_credits)), require_sign_out: ev.require_sign_out,
   }
 }
 
@@ -36,6 +36,7 @@ export default function CreateEventModal({ event, onClose, onCreated }) {
   const today = isoDate(0)
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+  const setChecked = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.checked }))
   const setDoctor = (i) => (e) => setForm((f) => ({ ...f, doctors: f.doctors.map((d, j) => (j === i ? e.target.value : d)) }))
 
   const submit = async (e) => {
@@ -139,6 +140,19 @@ export default function CreateEventModal({ event, onClose, onCreated }) {
             })}
           </div>
           <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">Enter 0 h 0 min if participants may sign out any time after signing in.</p>
+        </fieldset>
+        <fieldset className="sm:col-span-2">
+          <label className="flex items-start gap-2">
+            <input type="checkbox" className="mt-0.5 h-4 w-4" checked={form.require_sign_out} onChange={setChecked('require_sign_out')} />
+            <span>
+              <span className="label mb-0">Require sign-out</span>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {form.require_sign_out
+                  ? 'Checked: participants must sign in and then sign out to be marked present.'
+                  : 'Unchecked: there’s no sign-out step — signing in alone marks a participant present.'}
+              </p>
+            </span>
+          </label>
         </fieldset>
         <Field label="CME credits">
           <input className="input" type="number" min="0" max="9999.99" step="0.5" value={form.cme_credits} onChange={set('cme_credits')} />

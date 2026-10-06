@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
+import { ParticipantTypeInput } from '../components/CreateParticipantModal'
 import { pickFile, useImportFlow, XLSX_ACCEPT } from '../components/ImportFlow'
 import { ErrorNote, Field } from '../components/Modal'
 import { fmtDate, fmtDateTime } from '../utils'
@@ -55,6 +56,12 @@ export default function Import() {
           />
           <span className="mt-1.5 block text-sm text-gray-500 dark:text-gray-400">
             {busy ? 'Reading file…' : eventId ? 'Picking a file opens the review screen.' : 'Choose an event first.'}
+          </span>
+        </Field>
+        <Field label="Default participant type (optional)" className="sm:col-span-2">
+          <ParticipantTypeInput id="default-participant-type-list" value={flow.defaultType} onChange={flow.setDefaultType} placeholder="e.g. Faculty" />
+          <span className="mt-1.5 block text-sm text-gray-500 dark:text-gray-400">
+            Used for any row that doesn't already have a Participant Type — handy when the whole sheet is one type (e.g. a society's "Faculty list" with no such column).
           </span>
         </Field>
         <div className="sm:col-span-2"><ErrorNote>{error}</ErrorNote></div>

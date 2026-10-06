@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, PatternFill
+from openpyxl.utils import get_column_letter
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -12,24 +13,31 @@ from sqlalchemy.orm import Session
 from ..live import notify
 from ..db import get_db, row_to_dict
 from ..models import Event, ImportBatch, ImportError_, Participant, Registration, User
-from ..schemas import EMAIL_ERROR, EMAIL_RE, PHONE_ERROR, ImportCommit, phone_ok
+from ..schemas import EMAIL_ERROR, EMAIL_RE, PHONE_ERROR, ImportCommit, normalize_participant_type, phone_ok
 from ..security import require_admin
 from .registrations import LICENSE_REQUIRED
 
 router = APIRouter(prefix="/import", tags=["import"])
 
 TEMPLATE_HEADERS = [
-    "Name", "Designation", "Email", "Phone", "WhatsApp Number", "Place of Work",
+    "Name", "Designation", "Speciality", "Email", "Contact No.", "WhatsApp Number", "Institution/Hospital",
     "Country", "Medical License No.", "Participant Type",
 ]
 HEADER_TO_FIELD = {
-    "name": "name", "designation": "designation", "email": "email", "phone": "phone",
-    "whatsapp number": "whatsapp_number", "place of work": "place_of_work", "country": "country",
+    "name": "name", "designation": "designation", "speciality": "speciality", "email": "email",
+    "contact no.": "phone", "contact no": "phone", "phone": "phone",  # "Phone" kept for older downloaded templates
+    "whatsapp number": "whatsapp_number",
+    "institution/hospital": "place_of_work", "institution / hospital": "place_of_work", "place of work": "place_of_work",
+    "country": "country",
     "medical license no.": "medical_license_no", "medical license no": "medical_license_no",
     "participant type": "participant_type",
 }
 FIELDS = list(dict.fromkeys(HEADER_TO_FIELD.values()))
-REQUIRED = ["name", "designation", "email", "phone", "whatsapp_number", "place_of_work", "participant_type"]
+REQUIRED = ["name", "designation", "email", "phone", "place_of_work", "participant_type"]
+# Participant Type's own column can be left out of the sheet entirely when a default is supplied for
+# the whole batch (see default_participant_type below) — so it's not one of the columns that must exist.
+REQUIRED_COLUMNS = [f for f in REQUIRED if f != "participant_type"]
+OPTIONAL = ["whatsapp_number", "country", "medical_license_no", "speciality"]
 # Field -> the column header people see in the template, for error messages.
 LABELS = {HEADER_TO_FIELD[h.lower()]: h for h in TEMPLATE_HEADERS}
 MAX_UPLOAD_BYTES = 5 * 1024 * 1024
@@ -54,7 +62,7 @@ def parse_workbook(data: bytes) -> list[dict]:
             field = HEADER_TO_FIELD.get(cell_str(h).lower())
             if field and field not in col:
                 col[field] = i
-        missing = [LABELS[f] for f in REQUIRED if f not in col]
+        missing = [LABELS[f] for f in REQUIRED_COLUMNS if f not in col]
         if missing:
             raise HTTPException(400, f"Missing required columns: {', '.join(missing)}")
 
@@ -73,7 +81,7 @@ def parse_workbook(data: bytes) -> list[dict]:
     return out
 
 
-def validate_rows(db: Session, event: Event, rows: list[dict]) -> list[dict]:
+def validate_rows(db: Session, event: Event, rows: list[dict], default_participant_type: str | None = None) -> list[dict]:
     """Normalises rows in place and attaches an `errors` list to each."""
     registered = set(db.scalars(
         select(func.lower(Participant.email))
@@ -84,14 +92,16 @@ def validate_rows(db: Session, event: Event, rows: list[dict]) -> list[dict]:
     for row in rows:
         for f in FIELDS:
             row[f] = cell_str(row.get(f))
+        if not row["participant_type"] and default_participant_type:
+            row["participant_type"] = default_participant_type
         errors = [f"Missing {LABELS[f]}" for f in REQUIRED if not row[f]]
         for f in ("phone", "whatsapp_number"):
             if row[f] and not phone_ok(row[f]):
                 errors.append(f"{LABELS[f]}: {PHONE_ERROR}")
         if row["participant_type"]:
             row["participant_type"] = row["participant_type"].title()
-            if row["participant_type"] not in ("Faculty", "Delegate", "Sponsor"):
-                errors.append("Participant Type must be Faculty, Delegate, or Sponsor")
+            if len(row["participant_type"]) > 20:
+                errors.append(f"{LABELS['participant_type']} is too long (max 20 characters)")
         if event.cme_credits > 0 and not row["medical_license_no"]:
             errors.append(LICENSE_REQUIRED)
         email = row["email"].lower()
@@ -116,8 +126,8 @@ def template():
     for cell in ws[1]:
         cell.font = Font(bold=True, color="FFFFFF")
         cell.fill = PatternFill("solid", fgColor="8E1EA2")
-    for letter in "ABCDEFGHI":
-        ws.column_dimensions[letter].width = 22
+    for i in range(1, len(TEMPLATE_HEADERS) + 1):
+        ws.column_dimensions[get_column_letter(i)].width = 22
     buf = io.BytesIO()
     wb.save(buf)
     buf.seek(0)
@@ -133,6 +143,7 @@ async def preview(
     event_id: str = Form(...),
     source_type: Literal["cme_website", "external_society"] = Form(...),
     file: UploadFile = File(...),
+    default_participant_type: str | None = Form(None),
     db: Session = Depends(get_db),
 ):
     event = db.get(Event, event_id)
@@ -143,7 +154,13 @@ async def preview(
     data = await file.read(MAX_UPLOAD_BYTES + 1)
     if len(data) > MAX_UPLOAD_BYTES:
         raise HTTPException(400, "File is too large — the limit is 5 MB")
-    return {"rows": validate_rows(db, event, parse_workbook(data))}
+    default_type = None
+    if default_participant_type and default_participant_type.strip():
+        try:
+            default_type = normalize_participant_type(default_participant_type)
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+    return {"rows": validate_rows(db, event, parse_workbook(data), default_type)}
 
 
 @router.post("/commit")
@@ -154,7 +171,7 @@ def commit(body: ImportCommit, db: Session = Depends(get_db), user: User = Depen
     if event.status == "closed":
         raise HTTPException(400, "This event is closed")
     source = "website" if body.source_type == "cme_website" else "import"
-    rows = validate_rows(db, event, [r.model_dump() for r in body.rows])
+    rows = validate_rows(db, event, [r.model_dump() for r in body.rows], body.default_participant_type)
 
     errors = []
     for row in rows:
@@ -169,7 +186,7 @@ def commit(body: ImportCommit, db: Session = Depends(get_db), user: User = Depen
                 )
                 if not p:
                     p = Participant(
-                        **{f: row[f] or None for f in ("country", "medical_license_no")},
+                        **{f: row[f] or None for f in OPTIONAL},
                         **{f: row[f] for f in REQUIRED},
                         source=source,
                     )

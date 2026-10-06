@@ -128,6 +128,8 @@ def sign_out(attendance_id: str, body: SignOutIn, db: Session = Depends(get_db),
     event = db.get(Event, db.get(Registration, att.registration_id).event_id)
     if event.status == "closed":
         raise HTTPException(400, "This event is closed")
+    if not event.require_sign_out:
+        raise HTTPException(400, "This event doesn't require sign-out — signing in already marks attendance complete")
     now = datetime.now(timezone.utc)
     elapsed = (now - att.sign_in_time).total_seconds() / 3600
     required = float(event.approx_duration_hours)

@@ -19,7 +19,27 @@ def Opt(max_length: int):
     return Annotated[str, StringConstraints(strip_whitespace=True, max_length=max_length)]
 
 
-ParticipantType = Literal["Faculty", "Delegate", "Sponsor"]
+def normalize_participant_type(v: str) -> str:
+    """Plain-exception version of check_participant_type, for callers outside Pydantic models
+    (e.g. the bulk-import Form field for a whole batch's default type)."""
+    v = v.strip()
+    if not v:
+        raise ValueError("Participant type can't be empty")
+    if len(v) > 20:
+        raise ValueError("Participant type must be 20 characters or less")
+    return v.title()
+
+
+def check_participant_type(v: str) -> str:
+    try:
+        return normalize_participant_type(v)
+    except ValueError as e:
+        raise PydanticCustomError("participant_type", str(e))
+
+
+# Faculty / Delegate / Sponsor are just the suggested defaults (see frontend PARTICIPANT_TYPES) —
+# any title-cased label up to 20 characters is accepted, so staff can add roles like "Organizing Team".
+ParticipantType = Annotated[str, AfterValidator(check_participant_type)]
 
 # name@domain.tld — needs an @, a domain and a dot-extension of 2+ letters (rejects "abc@gmail", "abcgmail.com", "a@com").
 EMAIL_RE = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$")
@@ -106,6 +126,7 @@ class EventCreate(BaseModel):
     department: Req(200)
     cme_credits: Decimal = Field(default=Decimal(0), ge=0, le=Decimal("9999.99"))
     approx_duration_hours: Decimal = Field(ge=0, le=72)  # 0 = sign-out allowed right after sign-in
+    require_sign_out: bool = True
 
     @field_validator("event_date")
     @classmethod
@@ -125,6 +146,7 @@ class EventUpdate(BaseModel):
     department: Req(200) | None = None
     cme_credits: Decimal | None = Field(default=None, ge=0, le=Decimal("9999.99"))
     approx_duration_hours: Decimal | None = Field(default=None, ge=0, le=72)
+    require_sign_out: bool | None = None
 
     @field_validator("event_date")
     @classmethod
@@ -137,13 +159,14 @@ class ParticipantCreate(BaseModel):
     designation: Req(200)
     email: Email
     phone: Phone
-    whatsapp_number: Phone
+    whatsapp_number: Phone | None = None
     place_of_work: Req(255)
     country: Opt(100) | None = None
     medical_license_no: Opt(100) | None = None
     participant_type: ParticipantType = "Delegate"
+    speciality: Opt(200) | None = None
 
-    _clean = field_validator("country", "medical_license_no", mode="before")(blank_to_none)
+    _clean = field_validator("whatsapp_number", "country", "medical_license_no", "speciality", mode="before")(blank_to_none)
 
 
 class ParticipantUpdate(BaseModel):
@@ -156,8 +179,9 @@ class ParticipantUpdate(BaseModel):
     country: Opt(100) | None = None
     medical_license_no: Opt(100) | None = None
     participant_type: ParticipantType | None = None
+    speciality: Opt(200) | None = None
 
-    _clean = field_validator("country", "medical_license_no", mode="before")(blank_to_none)
+    _clean = field_validator("whatsapp_number", "country", "medical_license_no", "speciality", mode="before")(blank_to_none)
 
 
 class RegistrationCreate(BaseModel):
@@ -195,6 +219,7 @@ class ImportRow(BaseModel):
     country: Opt(100) = ""
     medical_license_no: Opt(100) = ""
     participant_type: Opt(20) = ""
+    speciality: Opt(200) = ""
 
     @field_validator("*", mode="before")
     @classmethod
@@ -208,4 +233,8 @@ class ImportCommit(BaseModel):
     event_id: str
     source_type: Literal["cme_website", "external_society"]
     source_file: Req(255)
+    # Applied to any row whose own Participant Type is blank — handy when a whole sheet is one type.
+    default_participant_type: ParticipantType | None = None
     rows: list[ImportRow] = Field(max_length=5000)
+
+    _clean = field_validator("default_participant_type", mode="before")(blank_to_none)

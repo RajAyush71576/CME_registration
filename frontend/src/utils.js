@@ -47,7 +47,7 @@ export function attendanceStatus(reg, event) {
   if (reg.manual_status === 'present') return { label: 'Completed', tone: 'green', key: 'completed' }
   if (reg.manual_status === 'absent') return { label: 'Absent', tone: 'red', key: 'absent' }
   const a = reg.attendance
-  if (a?.sign_out_time) return { label: 'Completed', tone: 'green', key: 'completed' }
+  if (a?.sign_out_time || (a && event?.require_sign_out === false)) return { label: 'Completed', tone: 'green', key: 'completed' }
   if (a) return { label: 'Signed in', tone: 'blue', key: 'signed_in' }
   if (event?.status === 'closed') return { label: 'Absent', tone: 'red', key: 'absent' }
   return { label: 'Not signed in', tone: 'gray', key: 'not_signed_in' }

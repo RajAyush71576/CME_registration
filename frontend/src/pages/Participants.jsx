@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { api } from '../api'
 import CreateParticipantModal from '../components/CreateParticipantModal'
 import { ErrorNote } from '../components/Modal'
-import { PARTICIPANT_TYPES, SOURCE_LABELS, fmtDate, istDay } from '../utils'
+import { SOURCE_LABELS, fmtDate, istDay } from '../utils'
 
 // Chip colour = how this person's attendance stands at that event.
 const ATTENDANCE = {
@@ -49,6 +49,7 @@ export default function Participants() {
   useEffect(() => { load() }, [])
 
   const designations = useMemo(() => [...new Set((list || []).map((p) => p.designation))].sort(), [list])
+  const types = useMemo(() => [...new Set((list || []).map((p) => p.participant_type))].sort(), [list])
   const eventOptions = useMemo(() => {
     const byId = new Map()
     for (const p of list || []) for (const e of p.events) byId.set(e.event_id, e)
@@ -81,7 +82,7 @@ export default function Participants() {
         </select>
         <select className="input" value={type} onChange={(e) => setType(e.target.value)} aria-label="Filter by participant type">
           <option value="">All types</option>
-          {PARTICIPANT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          {types.map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
         <select className="input" value={eventId} onChange={(e) => setEventId(e.target.value)} aria-label="Filter by event">
           <option value="">All events</option>

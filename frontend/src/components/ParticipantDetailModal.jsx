@@ -94,8 +94,8 @@ export default function ParticipantDetailModal({ reg, event, onClose, onChanged 
   })
 
   const details = [
-    ['Designation', p.designation], ['Type', p.participant_type], ['Email', p.email], ['Phone', p.phone],
-    ['WhatsApp', p.whatsapp_number], ['Place of work', p.place_of_work], ['Country', p.country || '—'],
+    ['Designation', p.designation], ['Speciality', p.speciality || '—'], ['Type', p.participant_type], ['Email', p.email], ['Phone', p.phone],
+    ['WhatsApp', p.whatsapp_number || '—'], ['Place of work', p.place_of_work], ['Country', p.country || '—'],
     ['Medical license no.', p.medical_license_no || '—'],
     ['Source', `${SOURCE_LABELS[reg.source] || reg.source}${reg.registered_by_name ? ` · by ${who(reg.registered_by_name, reg.registered_by_role)}` : ''}`],
   ]
@@ -152,6 +152,13 @@ export default function ParticipantDetailModal({ reg, event, onClose, onChanged 
                   Sign-in signature taken by <b>{who(att.signed_in_by_name, att.signed_in_by_role)}</b>
                   <br />
                   Sign-out signature taken by <b>{who(att.signed_out_by_name, att.signed_out_by_role)}</b>
+                </span>
+              </Notice>
+            ) : att && !event.require_sign_out ? (
+              <Notice tone="green">
+                Attendance complete: signed in at {fmtDateTime(att.sign_in_time)}
+                <span className="mt-1.5 block text-xs">
+                  Sign-out isn't required for this event — signature taken by <b>{who(att.signed_in_by_name, att.signed_in_by_role)}</b>
                 </span>
               </Notice>
             ) : closed ? (

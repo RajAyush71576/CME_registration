@@ -1,11 +1,36 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { api } from '../api'
 import { COUNTRIES, DEFAULT_COUNTRY, DEFAULT_DIAL, dialFor } from '../countries'
 import Modal, { ErrorNote, Field } from './Modal'
-import { EMAIL_HINT, EMAIL_PATTERN, isEmail } from '../utils'
+import { EMAIL_HINT, EMAIL_PATTERN, isEmail, PARTICIPANT_TYPES } from '../utils'
+
+// Faculty / Delegate / Sponsor plus whatever custom types (e.g. "Organizing Team") other
+// participants have already been given — fetched once and reused by every open of this form.
+export function useParticipantTypes() {
+  const [types, setTypes] = useState(PARTICIPANT_TYPES)
+  useEffect(() => {
+    api.participantTypes()
+      .then((fetched) => setTypes((t) => [...new Set([...t, ...fetched])].sort()))
+      .catch(() => {}) // suggestions are a convenience; typing a type by hand still works if this fails
+  }, [])
+  return types
+}
+
+// Free-text input with a filtered-as-you-type dropdown of known types — reused by the participant
+// form and by the bulk-import flow's "default type for this batch" field.
+export function ParticipantTypeInput({ value, onChange, id = 'participant-type-list', required, placeholder = 'e.g. Delegate', className = 'input' }) {
+  const participantTypes = useParticipantTypes()
+  return (
+    <>
+      <input className={className} list={id} maxLength={20} autoComplete="off" required={required}
+        placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} />
+      <datalist id={id}>{participantTypes.map((t) => <option key={t} value={t} />)}</datalist>
+    </>
+  )
+}
 
 export const EMPTY_PARTICIPANT = {
-  name: '', designation: '', email: '', phone: '', whatsapp_number: '', place_of_work: '',
+  name: '', designation: '', speciality: '', email: '', phone: '', whatsapp_number: '', place_of_work: '',
   country: DEFAULT_COUNTRY, medical_license_no: '', participant_type: 'Delegate',
 }
 
@@ -87,6 +112,7 @@ export function ParticipantFields({ form, setForm, licenseRequired }) {
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <Field label="Full name"><input className="input" required maxLength={200} autoComplete="off" value={form.name} onChange={set('name')} /></Field>
       <Field label="Designation"><input className="input" required maxLength={200} autoComplete="off" value={form.designation} onChange={set('designation')} /></Field>
+      <Field label="Speciality"><input className="input" maxLength={200} autoComplete="off" value={form.speciality || ''} onChange={set('speciality')} /></Field>
       <Field label="Email" required>
         <input className="input" type="email" required maxLength={255} autoComplete="off" pattern={EMAIL_PATTERN} title={EMAIL_HINT} placeholder="name@gmail.com"
           value={form.email} onChange={set('email')} onBlur={() => setEmailTouched(true)} />
@@ -94,8 +120,8 @@ export function ParticipantFields({ form, setForm, licenseRequired }) {
       </Field>
       <Field label="Phone" required><PhoneInput label="Phone number" required value={form.phone} onChange={setValue('phone')} country={form.country} /></Field>
       <div>
-        <Field label="WhatsApp number" required>
-          <PhoneInput label="WhatsApp number" required disabled={sameAsPhone} value={form.whatsapp_number} onChange={setValue('whatsapp_number')} country={form.country} />
+        <Field label="WhatsApp number">
+          <PhoneInput label="WhatsApp number" disabled={sameAsPhone} value={form.whatsapp_number} onChange={setValue('whatsapp_number')} country={form.country} />
         </Field>
         <label className="mt-1 inline-flex min-h-11 cursor-pointer items-center gap-2.5 text-sm text-gray-600 dark:text-gray-300">
           <input type="checkbox" className="h-5 w-5 accent-brand-700" checked={sameAsPhone} onChange={toggleSame} />
@@ -117,11 +143,7 @@ export function ParticipantFields({ form, setForm, licenseRequired }) {
         </span>
       </Field>
       <Field label="Participant type">
-        <select className="input" value={form.participant_type} onChange={set('participant_type')}>
-          <option value="Delegate">Delegate</option>
-          <option value="Faculty">Faculty</option>
-          <option value="Sponsor">Sponsor</option>
-        </select>
+        <ParticipantTypeInput value={form.participant_type} onChange={setValue('participant_type')} required />
       </Field>
     </div>
   )

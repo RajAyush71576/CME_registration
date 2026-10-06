@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api } from '../api'
 import Badge from '../components/Badge'
-import CreateParticipantModal from '../components/CreateParticipantModal'
+import CreateParticipantModal, { ParticipantTypeInput } from '../components/CreateParticipantModal'
 import EventStaffCard from '../components/EventStaff'
 import { pickFile, useImportFlow, XLSX_ACCEPT } from '../components/ImportFlow'
 import { ErrorNote } from '../components/Modal'
@@ -10,7 +10,7 @@ import ParticipantDetailModal from '../components/ParticipantDetailModal'
 import { useAutoRefresh, useLiveUpdates } from '../components/Refresh'
 import CreateEventModal from '../components/CreateEventModal'
 import { useAuth } from '../contexts/AuthContext'
-import { attendanceStatus, byAttendanceThenName, credits, fmtClock, fmtDate, fmtDuration, fmtTime, num, PARTICIPANT_TYPES, ROLE_LABELS, SOURCE_LABELS } from '../utils'
+import { attendanceStatus, byAttendanceThenName, credits, fmtClock, fmtDate, fmtDuration, fmtTime, num, ROLE_LABELS, SOURCE_LABELS } from '../utils'
 
 // Columns that only fit on wide screens; portrait tablets get the rest without sideways scrolling.
 const WIDE_ONLY = ['Source', 'Signatures taken by']
@@ -78,6 +78,7 @@ export default function EventDetail() {
     [r.registered_by_name, r.attendance?.signed_in_by_name, r.attendance?.signed_out_by_name]).filter(Boolean))].sort(), [regs])
 
   const designations = useMemo(() => [...new Set(regs.map((r) => r.participant.designation))].sort(), [regs])
+  const types = useMemo(() => [...new Set(regs.map((r) => r.participant.participant_type))].sort(), [regs])
 
   const filtered = useMemo(() => {
     const term = name.trim().toLowerCase()
@@ -168,13 +169,22 @@ export default function EventDetail() {
             </span>
           </h2>
           {!closed && (
-            <div className="ml-auto flex w-full flex-wrap gap-2 sm:w-auto">
+            <div className="ml-auto flex w-full flex-wrap items-center gap-2 sm:w-auto">
               {isAdmin && (
-                <label className={`btn-secondary flex-1 cursor-pointer sm:flex-none ${importFlow.busy ? 'pointer-events-none opacity-60' : ''}`}>
-                  <input type="file" accept={XLSX_ACCEPT} className="sr-only" disabled={importFlow.busy || importFlow.reviewing}
-                    onChange={pickFile((file) => importFlow.start(event, file))} />
-                  <span aria-hidden="true">⬆</span> {importFlow.busy ? 'Reading file…' : 'Import participants'}
-                </label>
+                <>
+                  <ParticipantTypeInput
+                    id="default-participant-type-list"
+                    className="input w-36 shrink-0 sm:w-40"
+                    value={importFlow.defaultType}
+                    onChange={importFlow.setDefaultType}
+                    placeholder="Default type for import"
+                  />
+                  <label className={`btn-secondary flex-1 cursor-pointer sm:flex-none ${importFlow.busy ? 'pointer-events-none opacity-60' : ''}`}>
+                    <input type="file" accept={XLSX_ACCEPT} className="sr-only" disabled={importFlow.busy || importFlow.reviewing}
+                      onChange={pickFile((file) => importFlow.start(event, file))} />
+                    <span aria-hidden="true">⬆</span> {importFlow.busy ? 'Reading file…' : 'Import participants'}
+                  </label>
+                </>
               )}
               <button className="btn-primary flex-1 sm:flex-none" onClick={() => setCreating(true)}>+ New participant</button>
             </div>
@@ -190,7 +200,7 @@ export default function EventDetail() {
             </select>
             <select className="input" value={type} onChange={(e) => setType(e.target.value)} aria-label="Filter by participant type">
               <option value="">All types</option>
-              {PARTICIPANT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+              {types.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
             <select className="input" value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Filter by attendance">
               <option value="">Any status</option>
